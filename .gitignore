@@ -1,0 +1,14 @@
+node_modules
+.env
+*.env
+.env.local
+.env.*.local
+# Google Cloud credentials
+kinetic-axle-*.json
+*-*.json
+!package.json
+!package-lock.json
+!yarn.lock
+!tsconfig*.json
+!nest-cli.json
+!eslint.config.mjs

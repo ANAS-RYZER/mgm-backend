@@ -1,0 +1,75 @@
+doctype html
+html
+  head
+    meta(charset='UTF-8')
+    meta(name='viewport', content='width=device-width, initial-scale=1.0')
+    title Investment Opportunity Update
+    style.
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f4f4f4;
+      }
+      .container {
+        background-color: #ffffff;
+        border-radius: 8px;
+        padding: 40px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      h1 {
+        color: #059669;
+        margin-top: 0;
+      }
+      .info-box {
+        background-color: #f0fdf4;
+        border-left: 4px solid #059669;
+        padding: 20px;
+        margin: 20px 0;
+      }
+      .info-item {
+        margin: 10px 0;
+        font-size: 16px;
+      }
+      .info-label {
+        font-weight: bold;
+        color: #065f46;
+      }
+      .button {
+        display: inline-block;
+        padding: 12px 24px;
+        background-color: #059669;
+        color: #ffffff;
+        text-decoration: none;
+        border-radius: 6px;
+        margin: 20px 0;
+      }
+      .footer {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #e5e7eb;
+        font-size: 14px;
+        color: #6b7280;
+      }
+  body
+    .container
+      h1 Investment Opportunity Update
+      p Hello #{name},
+      p Great news! There's an update on the investment opportunity you're interested in.
+      .info-box
+        .info-item
+          span.info-label Asset Name:
+          span= ' ' + assetName
+        .info-item
+          span.info-label Tokens You're Interested In:
+          span= ' ' + tokensInterested
+      p This is an exciting opportunity. Click below to view more details and take action.
+      p
+        a.button(href='#') View Details
+      .footer
+        p Best regards,
+        p The Ryzer Team
+
