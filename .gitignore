@@ -1,14 +1,16 @@
 node_modules
+dist
+*.tsbuildinfo
 .env
-*.env
 .env.local
 .env.*.local
-# Google Cloud credentials
-kinetic-axle-*.json
-*-*.json
-!package.json
-!package-lock.json
-!yarn.lock
-!tsconfig*.json
-!nest-cli.json
-!eslint.config.mjs
+.DS_Store
+coverage
+*.log
+logs
+.cache
+.idea
+.vscode
+*.swp
+*.swo
+*~
