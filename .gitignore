@@ -14,3 +14,10 @@ logs
 *.swp
 *.swo
 *~
+
+# Service account credentials
+*service-account*.json
+*-ce0a1c0fac88.json
+kinetic-axle*.json
+**/*credentials*.json
+**/*key*.json
