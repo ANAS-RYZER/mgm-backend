@@ -16,6 +16,7 @@ logs
 *~
 
 # Service account credentials
+google.json
 *service-account*.json
 *-ce0a1c0fac88.json
 kinetic-axle*.json
