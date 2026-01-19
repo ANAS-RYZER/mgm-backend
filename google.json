@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "kinetic-axle-442714-m6",
+  "private_key_id": "0ca46293582757f505f403e962081a64f684d86a",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDAYld1V1u1tkzu\np5U2D/qSTShEVxDL6JzVdXJHTbBJOj8QmXmZBLRBo4iREaDNbczRMqIzI2O91GAU\nhvHmCOU16RePIQomQcNEU5awC8qK3fZRULMYE4++Z0t/X5UH2SYh7OZ+f6b1nPAp\nLXKhZ8tmMcfQbDWQTq7ROsMtYM00YTRXh7nSPAMYHv1YN1rYexgaBn/B5kVWV7Ks\nvAz+XtSuM5Aa4o68n5JHG9FYoSZquWTm7nQaElJRiJf8x3Bwd6QoDhBBtOjaB3yb\naMFyf1mfEOnP0cGhRACi6LDcixRM2oHae/GnptZFSfaqDzcSrN55gAo4sFQA5oKq\ntIxH2dJxAgMBAAECggEACAgS/qMXAQ8LRytX31nrbBAsji3UVa7wXTj5/GAR6/yy\nhU7i9LBtlg/ts6C4xdq/ojwq6Veg4lvrZu/7SU81wnposWD/u3kjXcbfk5nqasG5\ndsuXrnmilqBZVof3AMzf+qqZNM6/eaGDpTRwhKyAoVOSs/DQi6W9Rp7dZxeTeYxC\nspF6OCltm7mRzNqqeheKNm6oAEmsLDmTA7bfe+w/o6ykfWSQZSB7PlDyYICzDXeW\nJw+jWHmurO4YN0l7uSuyYuMLnKatXGAzD9v1iW919D+9u5x1DOIjzq1gqzeHYYDn\njgZIBS+BJEF4v9z1hR8Bf0J2ubLLXdzQhv9j+WwMAQKBgQD14XrjOG9OthazgOkQ\n3Ws+RagnFM09y28Y4yDeTDSFgAGfbg9bPFc/JJAKrRGkvaEjK5K0xDimYvWj1zsR\nORDj7doitzhg/8wvdSQVDh7b8saqNU75VK3H7kW1C/86nbuHFdE1fVbj2t1+rTdE\nXhrZh36/Fa2nhZV+mGkJyd0CWQKBgQDITT0Ll/YVNfIQWeHQRbodY0IMbJEgcOuq\nglGGwwhKskkhI75y9/dyr6CrllBL8/V8Po8r3N1+ZqRv5oMbmYOcbhefuK5+lZgs\nNVSi56bpHYjwsYK4dFXIWTRC3sABQo5ppu2JsFhWXjPcKrgBe0IOFw+0SopvCkUw\noIZdvNzd2QKBgQDmCm4RleQ1jRDSImJrn+zNFxiKb+DR1rn7W8yNjlh5KljaU3tU\njbDG56tIAcIHEk9m+0ZHj2m86csN3blqlKxjw02ZuzepMMlVAVCfzlU6zPnnlvZr\nOTlZW2imSTIiIh6n9NaGJ90aUtN1yBN0CGMwb586ocqVd9p01Z04Rj9bCQKBgQCU\n4EvaPSWL2F/F5Xigu+K8ixUBdQRdT3DqeBguiPG1y1PtjMq2WzYRiRZr0rp16arx\noPH7URtUIuhfv759Ghonf/CRJ8ySi4/ic/Una/S0Wd55wAaAIP/NfPgKJ9QgW57M\nSmVNrMPL1hLHtvyzJTEQlfV3NNw18jVBEl8sdv7W6QKBgQCJ83AtfNTUQ+mAtFNn\n5xs05NK4NAKeF1ep2aD7+gDIucsD84QBu2ujKVavpSZ4CdFO/WE/NSG0Feqsqq/b\nHO6qsx0imr76ootj40DK4mD2W3noQpdYKe+H4Lnsgop++YLVohEGS2MKxpVO8sar\ncHbzZgmgv1oDlaHQdAOt9SaqPA==\n-----END PRIVATE KEY-----\n",
+  "client_email": "mgm-dev-storage@kinetic-axle-442714-m6.iam.gserviceaccount.com",
+  "client_id": "100323707781500990647",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/mgm-dev-storage%40kinetic-axle-442714-m6.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

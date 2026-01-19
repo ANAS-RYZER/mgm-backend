@@ -82,6 +82,7 @@ export class AssetsService {
     uploadUrl: string;
     savedS3Object: IAssetS3Object;
     expiresIn: number;
+    requiredHeaders: Record<string, string>;
   }> {
     // Validate the reference entity exists (basic validation - you may want to add actual entity checks)
     if (!Object.values(IS3ObjectType).includes(belongsTo)) {
@@ -91,7 +92,8 @@ export class AssetsService {
     }
 
     // Generate presigned URL
-    const { url, key: storageKey, expiresIn } = await this.gcpStorageService.getPresignedUploadUrl(
+    const { url, key: storageKey, expiresIn, requiredHeaders } =
+      await this.gcpStorageService.getPresignedUploadUrl(
       fileName,
       mimeType,
       refId,
@@ -116,6 +118,7 @@ export class AssetsService {
       uploadUrl: url,
       savedS3Object,
       expiresIn,
+      requiredHeaders,
     };
   }
 
@@ -137,6 +140,11 @@ export class AssetsService {
     savedS3Object: IAssetS3Object;
     expiresIn: number;
   }>> {
+    if (!Array.isArray(files) || files.length === 0) {
+      throw new BadRequestException(
+        "Invalid payload. Expected { files: [...] } with at least one item.",
+      );
+    }
     const results = await Promise.all(
       files.map((file) =>
         this.prepareSingleUpload(

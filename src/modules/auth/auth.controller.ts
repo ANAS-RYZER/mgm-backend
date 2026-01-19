@@ -55,7 +55,7 @@ export class AuthController {
     return this.authService.logout(sessionId);
   }
 
-  @Get('me')
+  @Get()
   @UseGuards(JwtAuthGuard)
   async getProfile(@Request() req) {
     return { user: req.user };

@@ -39,14 +39,17 @@ When you upload a file, the system generates a path like this:
    ```
 
 2. Set up authentication (choose one):
-   - **Service Account Key:** Set `GOOGLE_APPLICATION_CREDENTIALS` environment variable
+   - **Service Account Key (recommended for production):**
+     - **JSON in env:** set `GOOGLE_APPLICATION_CREDENTIALS_JSON` to the full service-account JSON content
+     - **Base64 in env:** set `GOOGLE_APPLICATION_CREDENTIALS_BASE64` to base64-encoded service-account JSON
+   - **Service Account Key (local/dev):** set `GOOGLE_APPLICATION_CREDENTIALS` to a file path (e.g. `./google.json`)
    - **Application Default Credentials:** Run `gcloud auth application-default login`
 
 3. Restart your server
 
 4. Make sure your client code actually uploads the file to the signed URL
 
-### 2. `AccessDenied` Error
+### 2. `AccessDenied` Error (Download)
 **Error Message:**
 ```
 <Code>AccessDenied</Code>
@@ -56,6 +59,38 @@ When you upload a file, the system generates a path like this:
 **Cause:** Trying to access a private object without a signed URL.
 
 **Solution:** Use the `/assets/:id/download-url` endpoint to get a signed download URL.
+
+### 3. `AccessDenied` Error (Upload - Permission Denied)
+**Error Message:**
+```
+<Code>AccessDenied</Code>
+<Message>Access denied.</Message>
+<Details>... does not have storage.objects.create access to the Google Cloud Storage object. Permission 'storage.objects.create' denied on resource (or it may not exist).</Details>
+```
+
+**Cause:** The service account used to generate signed URLs doesn't have the required permissions to create objects in the GCP Storage bucket.
+
+**Solution:**
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Navigate to **IAM & Admin** → **IAM**
+3. Find your service account (e.g., `mgm-bucket@kinetic-axle-442714-m6.iam.gserviceaccount.com`)
+4. Click **Edit** (pencil icon)
+5. Add the role: **Storage Object Creator** (`roles/storage.objectCreator`)
+   - Or for more permissions: **Storage Admin** (`roles/storage.admin`)
+6. Alternatively, grant permissions at the bucket level:
+   - Go to **Cloud Storage** → **Buckets** → Select your bucket (`mgm_dev`)
+   - Click **Permissions** tab
+   - Click **Grant Access**
+   - Add your service account email
+   - Select role: **Storage Object Creator** or **Storage Admin**
+   - Click **Save**
+
+**Required Permissions for Signed URLs:**
+- **For uploads:** `storage.objects.create` (included in `Storage Object Creator`)
+- **For downloads:** `storage.objects.get` (included in `Storage Object Viewer` or `Storage Object Creator`)
+- **For deletions:** `storage.objects.delete` (included in `Storage Object Admin` or `Storage Admin`)
+
+**Note:** It may take a few minutes for permission changes to propagate. Wait 2-3 minutes and try again.
 
 ## Checking if Asset Record Exists
 

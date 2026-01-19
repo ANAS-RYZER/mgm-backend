@@ -58,6 +58,7 @@ export class AssetsController {
       message: 'Upload URL generated successfully',
       data: {
         uploadUrl: result.uploadUrl,
+        requiredHeaders: result.requiredHeaders,
         assetS3Object: result.savedS3Object,
         expiresIn: result.expiresIn,
       },
