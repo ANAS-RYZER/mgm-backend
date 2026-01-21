@@ -4,6 +4,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
+import { AdminAuthModule } from './modules/admins/admin-auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { AssetsModule } from './modules/assets/assets.module';
 import { RedisModule } from './infra/redis/redis.module';
@@ -17,6 +18,7 @@ import { EmailModule } from './infra/email/email.module';
       envFilePath: '.env',
     }),
     AuthModule,
+    AdminAuthModule,
     UsersModule,
     AssetsModule,
     RedisModule,
