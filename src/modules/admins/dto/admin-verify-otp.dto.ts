@@ -1,6 +1,6 @@
 import { IsNotEmpty, IsString, Length } from 'class-validator';
 
-export class VerifyOtpDto {
+export class AdminVerifyOtpDto {
   @IsString({ message: 'Token must be a string' })
   @IsNotEmpty({ message: 'Token is required' })
   token: string;

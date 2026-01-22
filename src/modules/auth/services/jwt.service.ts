@@ -10,6 +10,13 @@ export interface TokenPayload {
   sessionId?: string;
 }
 
+export interface VerificationTokenPayload {
+  email: string;
+  password: string;
+  fullName?: string;
+  type: string;
+}
+
 @Injectable()
 export class JwtTokenService {
   private readonly accessTokenSecret: string;
@@ -48,6 +55,24 @@ export class JwtTokenService {
       secret: this.refreshTokenSecret,
       expiresIn: this.refreshTokenExpiresIn,
     } as JwtSignOptions);
+  }
+
+  generateVerificationToken(payload: VerificationTokenPayload): string {
+    return this.jwtService.sign(payload, {
+      secret: this.accessTokenSecret,
+      expiresIn: '15m', // Verification token expires in 15 minutes
+    } as JwtSignOptions);
+  }
+
+  verifyVerificationToken(token: string): VerificationTokenPayload {
+    try {
+      const payload = this.jwtService.verify(token, {
+        secret: this.accessTokenSecret,
+      });
+      return payload as VerificationTokenPayload;
+    } catch (error) {
+      throw new UnauthorizedException('Invalid or expired verification token');
+    }
   }
 
   verifyAccessToken(token: string): TokenPayload {

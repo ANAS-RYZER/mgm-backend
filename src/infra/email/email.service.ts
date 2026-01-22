@@ -123,6 +123,15 @@ export class EmailService {
   }
 
   /**
+   * Send Admin OTP email
+   * @param email - Recipient admin email address
+   * @param otp - OTP code to send
+   */
+  async sendAdminOtpToEmail(email: string, otp: string): Promise<void> {
+    await this.sendEmail(email, 'MGM Admin Verification Code', 'admin-otp', { otp });
+  }
+
+  /**
    * Send welcome email
    * @param email - Recipient email address
    * @param context - Additional context for the template (e.g., { name: 'John Doe' })

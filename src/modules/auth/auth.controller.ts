@@ -7,12 +7,15 @@ import {
   UseGuards,
   Request,
   Get,
+  Put,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { ResendOtpDto } from './dto/resend-otp.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Controller('auth')
@@ -26,10 +29,9 @@ export class AuthController {
   }
 
   @Post('verify-otp')
-  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async verifyOtp(@Body() verifyOtpDto: VerifyOtpDto, @Request() req) {
-    return this.authService.verifyOtp(verifyOtpDto, req);
+  async verifyOtp(@Body() verifyOtpDto: VerifyOtpDto) {
+    return this.authService.verifyOtp(verifyOtpDto);
   }
 
   @Post('login')
@@ -55,17 +57,28 @@ export class AuthController {
     return this.authService.logout(sessionId);
   }
 
-  @Get()
+  @Get('me')
   @UseGuards(JwtAuthGuard)
   async getProfile(@Request() req) {
-    return { user: req.user };
+    const userId = req.user?.userId;
+    return this.authService.getProfile(userId);
   }
 
   @Post('resend-otp')
+  @HttpCode(HttpStatus.OK)
+  async resendOtp(@Body() resendOtpDto: ResendOtpDto) {
+    return this.authService.resendOtp(resendOtpDto.email);
+  }
+
+  @Put('profile')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async resendOtp(@Request() req) {
-    return this.authService.resendOtp(req);
-  } 
+  async updateProfile(
+    @Request() req,
+    @Body() updateProfileDto: UpdateProfileDto,
+  ) {
+    const userId = req.user?.userId;
+    return this.authService.updateProfile(userId, updateProfileDto);
+  }
 }
 

@@ -1,10 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
-export type UserDocument = User & Document;
+export type AdminDocument = Admin & Document;
 
 @Schema({ timestamps: true })
-export class User {
+export class Admin {
   @Prop({ required: true })
   fullName?: string;
 
@@ -17,8 +17,8 @@ export class User {
   @Prop({ default: false })
   isEmailVerified: boolean;
 
-  @Prop({ required: false })
-  type?: string;
+  @Prop({ default: 'admin' })
+  role?: string;
 
   @Prop({ 
     type: String, 
@@ -27,5 +27,5 @@ export class User {
   avatar: string;
 }
 
-export const UserSchema = SchemaFactory.createForClass(User);
+export const AdminSchema = SchemaFactory.createForClass(Admin);
 
