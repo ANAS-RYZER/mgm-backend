@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
+import { AdminAuthModule } from './modules/admins/admin-auth.module';
 import { AssetsModule } from './modules/assets/assets.module';
 import { RedisModule } from './infra/redis/redis.module';
 import { MongodbModule } from './infra/mongodb/mongodb.module';
@@ -18,6 +19,7 @@ import { EmailModule } from './infra/email/email.module';
     }),
     AuthModule,
     UsersModule,
+    AdminAuthModule,
     AssetsModule,
     RedisModule,
     MongodbModule,
