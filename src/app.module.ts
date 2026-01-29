@@ -11,6 +11,7 @@ import { RedisModule } from './infra/redis/redis.module';
 import { MongodbModule } from './infra/mongodb/mongodb.module';
 import { EmailModule } from './infra/email/email.module';
 import { ProductsModule } from './modules/products/products.module';
+import { WishlistModule } from './modules/wishlist/wishlist.module';
 
 
 @Module({
@@ -27,6 +28,7 @@ import { ProductsModule } from './modules/products/products.module';
     MongodbModule,
     EmailModule,
     ProductsModule,
+    WishlistModule,
   ],
   controllers: [AppController],
   providers: [AppService],
