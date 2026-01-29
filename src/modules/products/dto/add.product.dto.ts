@@ -17,7 +17,7 @@ import { StoneDetailsDto } from "./stone-details.dto";
 import { GoldSpecsDto } from "./gold-specs.dto";
 
 
-export class CreateProductDto {
+export class AddProductDto {
   @IsString()
   @IsNotEmpty()
   sku: string;

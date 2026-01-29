@@ -10,20 +10,20 @@ export enum Categories {
 }
 
 export enum GemCut {
-  ROUND_BRILLIANT = "Round Brilliant",
-  OVAL = "Oval",
-  PRINCESS = "Princess",
-  CUSHION = "Cushion",
-  EMERALD = "Emerald Cut",
-  PEAR = "Pear",
-  MARQUISE = "Marquise",
-  RADIANT = "Radiant",
-  ASSCHER = "Asscher",
-  HEART = "Heart",
-  TRILLIANT = "Trilliant",
-  BAGUETTE = "Baguette",
-  CABOCHON = "Cabochon",
-  ROSE = "Rose Cut",
+  ROUND_BRILLIANT = "round-brilliant",
+  OVAL = "oval",
+  PRINCESS = "princess",
+  CUSHION = "cushion",
+  EMERALD = "emerald-cut",
+  PEAR = "pear",
+  MARQUISE = "marquise",
+  RADIANT = "radiant",
+  ASSCHER = "asscher",
+  HEART = "heart",
+  TRILLIANT = "trilliant",
+  BAGUETTE = "baguette",
+  CABOCHON = "cabochon",
+  ROSE = "rose-cut",
 }
 
 export enum DiamondClarity {
@@ -66,21 +66,21 @@ export enum DiamondColor {
 }
 
 export enum GemstoneColor {
-  VIVID_GREEN = "Vivid Green",
-  GREEN = "Green",
-  LIGHT_GREEN = "Light Green",
-  DEEP_GREEN = "Deep Green",
+  VIVID_GREEN = "vivid-green",
+  GREEN = "green",
+  LIGHT_GREEN = "light-green",
+  DEEP_GREEN = "deep-green",
 
-  VIVID_BLUE = "Vivid Blue",
-  ROYAL_BLUE = "Royal Blue",
+  VIVID_BLUE = "vivid-blue",
+  ROYAL_BLUE = "royal-blue",
 
-  RED = "Red",
-  VIVID_RED = "Vivid Red",
+  RED = "red",
+  VIVID_RED = "vivid-red",
 
-  YELLOW = "Yellow",
-  PINK = "Pink",
-  PURPLE = "Purple",
-  ORANGE = "Orange",
+  YELLOW = "yellow",
+  PINK = "pink",
+  PURPLE = "purple",
+  ORANGE = "orange",
 }
 
 export type Color =
@@ -95,14 +95,14 @@ export interface StoneDetails {
   color: Color;
 }
 export enum ProductStatus {
-  NEW_LAUNCH = "New Launch",
-  READY_TO_SHIP = "Ready to Ship",
-  IN_PRODUCTION = "In Production",
-  LOW_STOCK = "Low Stock",
-  OUT_OF_STOCK = "Out of Stock",
-  BEST_SELLER = "Best Seller",
-  LIMITED_EDITION = "Limited Edition",
-  DISCONTINUED = "Discontinued"
+  NEW_LAUNCH = "new-launch",
+  READY_TO_SHIP = "ready-to-ship",
+  IN_PRODUCTION = "in-production",
+  LOW_STOCK = "low-stock",
+  OUT_OF_STOCK = "out-of-stock",
+  BEST_SELLER = "best-seller",
+  LIMITED_EDITION = "limited-edition",
+  DISCONTINUED = "discontinued",
 }
 
 export interface IProduct {
@@ -112,11 +112,12 @@ export interface IProduct {
   description?: string;
   mrpPrice: number;
   discountedPrice?: number;
+  image?: string;
   gallery?: string[];
   stockQuantity: number;
   categories: Categories;
   goldSpecs: {
-    kartage: string;
+    karat: string;
     goldWeight: number;
     grossWeight: number;
     purity: string;
@@ -125,5 +126,4 @@ export interface IProduct {
   };
   stoneSpecs?: StoneDetails[];
   status: ProductStatus;
-  
 }

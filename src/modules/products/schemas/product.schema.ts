@@ -1,6 +1,14 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Document } from "mongoose";
-import { Categories, DiamondClarity, DiamondColor, GemCut, GemstoneColor, ProductStatus } from "../interfaces/product.interface";
+import {
+  Categories,
+  DiamondClarity,
+  DiamondColor,
+  GemCut,
+  GemstoneColor,
+  IProduct,
+  ProductStatus,
+} from "../interfaces/product.interface";
 
 //Color Schema
 @Schema({ _id: false })
@@ -33,7 +41,6 @@ export class StoneDetails {
 }
 export const StoneDetailsSchema = SchemaFactory.createForClass(StoneDetails);
 
-
 //Gold Specs Schema
 @Schema({ _id: false })
 export class GoldSpecs {
@@ -57,10 +64,11 @@ export class GoldSpecs {
 }
 export const GoldSpecsSchema = SchemaFactory.createForClass(GoldSpecs);
 
+export type ProductDocument = Product & Document;
+
 //Product Schema
 @Schema({ timestamps: true })
-export class Product extends Document {
-
+export class Product  {
   @Prop({ required: true, unique: true })
   sku: string;
 
@@ -75,6 +83,9 @@ export class Product extends Document {
 
   @Prop()
   discountedPrice?: number;
+
+  @Prop()
+  image?: string;
 
   @Prop({ type: [String] })
   gallery?: string[];
