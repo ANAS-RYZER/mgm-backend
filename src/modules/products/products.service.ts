@@ -54,7 +54,18 @@ export class ProductsService {
     search?: string,
     category?: Categories,
     sortPrice?: "asc" | "desc",
-  ): Promise<Product[]> {
+    page = 1,
+    limit = 10,
+  ): Promise<{
+    products: Product[];
+    page: number;
+    limit: number;
+    currentPage: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+    totalCount: number;
+    totalPages: number;
+  }> {
     const filter: any = {};
 
     if (search) {
@@ -63,6 +74,7 @@ export class ProductsService {
         { sku: { $regex: search, $options: "i" } },
       ];
     }
+
     if (category) {
       filter.categories = category;
     }
@@ -71,21 +83,40 @@ export class ProductsService {
     if (sortPrice === "asc") sort.mrpPrice = 1;
     if (sortPrice === "desc") sort.mrpPrice = -1;
 
-    try {
-      const products = await this.productModel
-        .find(filter)
-        .sort(sort)
-        .select("-__v -createdAt -updatedAt")
-        .lean()
-        .exec();
+    const skip = (page - 1) * limit;
 
-      return products;
+    try {
+      const [products, totalCount] = await Promise.all([
+        this.productModel
+          .find(filter)
+          .sort(sort)
+          .skip(skip)
+          .limit(limit)
+          .select("-__v -createdAt -updatedAt")
+          .lean()
+          .exec(),
+
+        this.productModel.countDocuments(filter),
+      ]);
+
+      const totalPages = Math.ceil(totalCount / limit);
+
+      return {
+        products,
+        page,
+        limit,
+        currentPage: page,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+        totalCount,
+        totalPages,
+      };
     } catch (error) {
       this.logger.error(`Failed to retrieve products`, error.stack);
-
       throw new InternalServerErrorException("Failed to retrieve products");
     }
   }
+
 
   async getProductById(productId: string): Promise<Product> {
     try {
@@ -106,4 +137,37 @@ export class ProductsService {
       throw new InternalServerErrorException("Failed to retrieve products");
     }
   }
+
+  async updateProduct(
+    productId: string,
+    updateData: any,
+    ): Promise<Product> {
+    try {
+      const updatedProduct = await this.productModel
+        .findByIdAndUpdate(
+          productId,
+          { $set: updateData },
+          { new: true, runValidators: true },
+        )
+        .select("-__v -createdAt -updatedAt")
+        .exec();
+
+      if (!updatedProduct) {
+        throw new NotFoundException(
+          `Product with ID ${productId} not found`,
+        );
+      }
+
+      return updatedProduct;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        "Failed to update product",
+      );
+    }
+  }
+
 }
