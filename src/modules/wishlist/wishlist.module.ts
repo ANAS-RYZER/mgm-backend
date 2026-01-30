@@ -18,5 +18,6 @@ import { AuthModule } from '../auth/auth.module';
   ],
   controllers: [WishlistController],
   providers: [WishlistService],
+  exports: [WishlistService],
 })
 export class WishlistModule {}

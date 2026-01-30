@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -8,6 +9,7 @@ import {
   Post,
   Query,
   Put,
+  Req,
   UseGuards,
 } from "@nestjs/common";
 import { ProductsService } from "./products.service";
@@ -73,4 +75,45 @@ export class ProductsController {
   ) {
     return this.productsService.updateProduct(productId, updateProductDto);
   }
+
+  @Get('user/all')
+  @HttpCode(HttpStatus.OK)
+  async getAllProductsForUser(
+    @Req() req: any,
+    @Query('search') search?: string,
+    @Query('category') category?: Categories,
+    @Query('sortPrice') sortPrice?: 'asc' | 'desc',
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+  ) {
+    // Extract wishlist and userId from req.query (same pattern as bookmarked/investorId)
+    const { wishlist, userId: _userId, ...query } = req.query;
+    const userId = _userId as string;
+    const result = await this.productsService.getAllProductsForUser(
+      {
+        ...query,
+        search,
+        category,
+        sortPrice,
+        wishlist,
+        page: Number(page),
+        limit: Number(limit),
+      },
+      userId,
+    );
+
+    return {
+      data: result.products,
+      pagination: {
+        page: result.page,
+        limit: result.limit,
+        currentPage: result.currentPage,
+        hasNextPage: result.hasNextPage,
+        hasPreviousPage: result.hasPreviousPage,
+        totalCount: result.totalCount,
+        totalPages: result.totalPages,
+      },
+    };
+  }
+
 }

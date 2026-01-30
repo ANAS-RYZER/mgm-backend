@@ -6,11 +6,13 @@ import { Product, ProductSchema } from "./schemas/product.schema";
 import { AuthModule } from "../auth/auth.module";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { AdminAuthModule } from "../admins/admin-auth.module";
+import { WishlistModule } from "../wishlist/wishlist.module";
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Product.name, schema: ProductSchema }]),
     AdminAuthModule,
+    WishlistModule,
   ],
 
   controllers: [ProductsController],

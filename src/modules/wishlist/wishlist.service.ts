@@ -177,4 +177,31 @@ export class WishlistService {
     };
   }
 
+  async isProductWishlisted(productId: string, userId?: string): Promise<boolean> {
+    if (!userId) {
+      return false; // If no userId provided, product is not wishlisted
+    }
+
+    try {
+      const exists = await this.wishlistModel.exists({
+        productId: new Types.ObjectId(productId),
+        userId: new Types.ObjectId(userId),
+      });
+      return !!exists;
+    } catch (error) {
+      return false; // Handle any errors by defaulting to false
+    }
+  }
+
+  async getWishlistCount(productId: string): Promise<number> {
+    try {
+      return this.wishlistModel.countDocuments({ 
+        productId: new Types.ObjectId(productId) 
+      });
+    } catch (error) {
+      return 0; // Handle any errors by defaulting to 0
+    }
+  }
+
+
 }
