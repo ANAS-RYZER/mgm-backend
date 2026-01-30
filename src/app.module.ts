@@ -12,6 +12,7 @@ import { MongodbModule } from './infra/mongodb/mongodb.module';
 import { EmailModule } from './infra/email/email.module';
 import { ProductsModule } from './modules/products/products.module';
 import { WishlistModule } from './modules/wishlist/wishlist.module';
+import { AgentModule } from './modules/agents/agent.module';
 
 
 @Module({
@@ -29,6 +30,7 @@ import { WishlistModule } from './modules/wishlist/wishlist.module';
     EmailModule,
     ProductsModule,
     WishlistModule,
+    AgentModule,
   ],
   controllers: [AppController],
   providers: [AppService],
