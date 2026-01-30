@@ -142,6 +142,38 @@ export class ProductsService {
     }
   }
 
+  async getProductuserById(productId: string, userId?: string): Promise<any> {
+    try {
+      const product = await this.productModel
+        .findById(productId)
+        .select("-__v -createdAt -updatedAt")
+        .lean()
+        .exec();
+      
+      if (!product) {
+        throw new NotFoundException(`Product with ID ${productId} not found`);
+      }
+
+      // Get wishlist information (similar to bookmark logic)
+      const [isWishlisted, wishlistUsers] = await Promise.all([
+        this.wishlistService.isProductWishlisted(productId, userId),
+        this.wishlistService.getUsersWhoWishlisted(productId),
+      ]);
+
+      // Return product with wishlist data
+      return {
+        ...product,
+        isWishlisted,
+        wishlistUsers, // Users who wishlisted this product
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException("Failed to retrieve product");
+    }
+  }
+
   async updateProduct(
     productId: string,
     updateData: any,
