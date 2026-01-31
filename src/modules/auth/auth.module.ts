@@ -10,6 +10,7 @@ import { TokenStorageService } from './services/token-storage.service';
 import { OtpService } from './services/otp.service';
 import { RedisModule } from '../../infra/redis/redis.module';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from './guards/optional-jwt-auth.guard';
 
 @Module({
   imports: [
@@ -31,7 +32,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
     ConfigModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtTokenService, TokenStorageService, OtpService, JwtAuthGuard],
-  exports: [AuthService, JwtAuthGuard,JwtModule],
+  providers: [AuthService, JwtTokenService, TokenStorageService, OtpService, JwtAuthGuard, OptionalJwtAuthGuard],
+  exports: [AuthService, JwtAuthGuard, OptionalJwtAuthGuard, JwtModule],
 })
 export class AuthModule {}

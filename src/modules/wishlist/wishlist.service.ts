@@ -203,5 +203,42 @@ export class WishlistService {
     }
   }
 
+  // Get users who wishlisted a product (similar to bookmark investors)
+  async getUsersWhoWishlisted(productId: string): Promise<Array<{
+    _id: string;
+    user_name: string;
+    avatar: string | null;
+  }>> {
+    try {
+      const wishlists = await this.wishlistModel
+        .find({ productId: new Types.ObjectId(productId) })
+        .populate({
+          path: 'userId',
+          select: '_id fullName avatar',
+          model: 'User',
+        })
+        .lean();
+
+      return wishlists
+        .map((wishlist: any) => {
+          const user = wishlist.userId;
+          if (!user?._id) return null;
+
+          return {
+            _id: user._id.toString(),
+            user_name: user.fullName || 'Unknown',
+            avatar: user.avatar || null,
+          };
+        })
+        .filter(Boolean) as Array<{
+          _id: string;
+          user_name: string;
+          avatar: string | null;
+        }>;
+    } catch (error) {
+      return []; // Handle any errors by returning empty array
+    }
+  }
+
 
 }
