@@ -1,6 +1,7 @@
 export enum IS3ObjectType {
   PRODUCT = 'product',
   USER = 'user',
+  AGENT = 'agent',
 }
 
 export enum MimeTypes {

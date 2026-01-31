@@ -10,6 +10,7 @@ export enum Categories {
 }
 
 export enum GemCut {
+  ROUND = "round",
   ROUND_BRILLIANT = "round-brilliant",
   OVAL = "oval",
   PRINCESS = "princess",

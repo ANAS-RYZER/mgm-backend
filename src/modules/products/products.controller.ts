@@ -11,9 +11,11 @@ import {
   Put,
   Req,
   UseGuards,
+  UseInterceptors,
 } from "@nestjs/common";
 import { ProductsService } from "./products.service";
 import { AddProductDto } from "./dto/add.product.dto";
+import { NormalizeStoneSpecsInterceptor } from "./interceptors/normalize-stone-specs.interceptor";
 import { AdminJwtAuthGuard } from "../admins/guards/admin-jwt-auth.guard";
 import { Categories } from "./interfaces/product.interface";
 import { UpdateProductDto } from "./dto/update.product.dto";
@@ -24,7 +26,8 @@ export class ProductsController {
 
   @Post("/add-product")
   @HttpCode(HttpStatus.CREATED)
-  @UseGuards(AdminJwtAuthGuard)
+  @UseInterceptors(NormalizeStoneSpecsInterceptor)
+  // @UseGuards(AdminJwtAuthGuard)
   async addProduct(@Body() addProductDto: AddProductDto) {
     return this.productsService.addProduct(addProductDto);
   }
