@@ -1,0 +1,94 @@
+doctype html
+html(lang='en')
+  head
+    meta(charset='UTF-8')
+    meta(name='viewport' content='width=device-width, initial-scale=1.0')
+    title Agent Registration Successful
+    style.
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 20px;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #ffffff;
+        padding: 30px;
+        text-align: center;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 28px;
+      }
+      .content {
+        padding: 30px;
+      }
+      .content h2 {
+        color: #333333;
+        font-size: 22px;
+        margin-top: 0;
+      }
+      .content p {
+        color: #666666;
+        font-size: 16px;
+        line-height: 1.6;
+      }
+      .info-box {
+        background-color: #f8f9fa;
+        border-left: 4px solid #667eea;
+        padding: 20px;
+        margin: 25px 0;
+        border-radius: 5px;
+      }
+      .info-box p {
+        margin: 10px 0;
+        font-size: 16px;
+      }
+      .info-box strong {
+        color: #333333;
+        display: inline-block;
+        min-width: 100px;
+      }
+      .footer {
+        background-color: #f8f9fa;
+        padding: 20px;
+        text-align: center;
+        color: #999999;
+        font-size: 14px;
+      }
+  body
+    .container
+      .header
+        h1 ✅ Registration Successful
+      .content
+        h2 Hello #{name}!
+        p Thank you for registering as an agent with MGM. Your application has been received successfully.
+        p Your account is currently under review. Our admin team will verify your details and approve your account shortly. You will receive another email with your login credentials once your account is approved.
+        
+        .info-box
+          p
+            strong Agent ID:
+            span #{agentId}
+          p
+            strong Email:
+            span #{email}
+        
+        p If you have any questions, please contact our support team.
+        
+        p
+          | Best regards,
+          br
+          | <strong>The MGM Team</strong>
+      
+      .footer
+        p © #{new Date().getFullYear()} MGM. All rights reserved.
+        p This is an automated email. Please do not reply to this message.

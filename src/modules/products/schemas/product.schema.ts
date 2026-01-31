@@ -53,8 +53,7 @@ export class GoldSpecs {
   @Prop({ required: true })
   grossWeight: number;
 
-  @Prop({ required: true })
-  purity: string;
+  
 
   @Prop({ required: true })
   makingCharges: number;
@@ -85,7 +84,7 @@ export class Product  {
   discountedPrice?: number;
 
   @Prop()
-  image?: string;
+  image: string;
 
   @Prop({ type: [String] })
   gallery?: string[];
@@ -97,13 +96,12 @@ export class Product  {
   categories: Categories;
 
   @Prop({ type: GoldSpecsSchema, required: true })
-  goldSpecs: GoldSpecs;
+  goldSpecs?: GoldSpecs;
 
   @Prop({ type: [StoneDetailsSchema] })
   stoneSpecs?: StoneDetails[];
 
-  @Prop({ enum: ProductStatus, required: true })
-  status: ProductStatus;
+  
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);

@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Agent, AgentSchema } from './schemas/agent.schema';
+import { AgentCounter, AgentCounterSchema } from './schemas/agent.counter.schema';
 import { AgentController } from './agent.controller';
 import { AgentService } from './agent.service';
 import { AgentJwtService } from './services/agent-jwt.service';
@@ -15,7 +16,10 @@ import { RedisModule } from '../../infra/redis/redis.module';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Agent.name, schema: AgentSchema }]),
+    MongooseModule.forFeature([
+      { name: Agent.name, schema: AgentSchema },
+      { name: AgentCounter.name, schema: AgentCounterSchema },
+    ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService): JwtModuleOptions => {

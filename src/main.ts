@@ -25,7 +25,7 @@ async function bootstrap() {
     .get<string>("ALLOWED_ORIGINS")
     ?.split(",")
     .map((origin) => origin.trim())
-    .filter((origin) => origin) || ['http://localhost:3000', 'http://localhost:3001' , 'https://mgm-user.vercel.app' , "http://localhost:5173" , "http://localhost:5174"];
+    .filter((origin) => origin) || ['http://localhost:3000', 'http://localhost:3001' , 'https://mgm-agent-form.vercel.app' , 'https://mgm-user.vercel.app' , "http://localhost:5173" , "http://localhost:5174"];
   
   // Enable CORS with limited origins
   app.enableCors({
