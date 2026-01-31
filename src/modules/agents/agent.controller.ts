@@ -42,7 +42,7 @@ export class AgentController {
   // Get all agents (Admin only)
   @Get()
   @HttpCode(HttpStatus.OK)
-  @UseGuards(AdminJwtAuthGuard)
+  // @UseGuards(AdminJwtAuthGuard)
   async getAllAgents(@Query('status') status?: AgentStatus) {
     const agents = await this.agentService.getAllAgents(status);
     return {
