@@ -175,6 +175,23 @@ export class EmailService {
   }
 
   /**
+   * Send agent registration success email
+   * @param email - Agent email address
+   * @param context - Context with name, email, and agentId
+   */
+  async sendAgentRegistrationSuccess(
+    email: string,
+    context: { name: string; email: string; agentId: string },
+  ): Promise<void> {
+    await this.sendEmail(
+      email,
+      'MGM Agent – Registration Successful',
+      'agent-registration-success',
+      context,
+    );
+  }
+
+  /**
    * Send agent credentials email
    * @param email - Agent email address
    * @param context - Context with name, email, password, and loginUrl

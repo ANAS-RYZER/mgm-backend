@@ -20,6 +20,8 @@ import { EmailService } from '../../infra/email/email.service';
 import { AgentJwtService } from './services/agent-jwt.service';
 import { AgentTokenStorageService } from './services/agent-token-storage.service';
 import { AgentOtpService } from './services/agent-otp.service';
+import { v4 as uuidv4 } from 'uuid';
+import { AgentCounter } from './schemas/agent.counter.schema';
 
 @Injectable()
 export class AgentService {
@@ -28,6 +30,8 @@ export class AgentService {
   constructor(
     @InjectModel(Agent.name)
     private readonly agentModel: Model<AgentDocument>,
+    @InjectModel(AgentCounter.name)
+    private readonly agentCounterModel: Model<AgentCounter>,
     private readonly emailService: EmailService,
     private readonly agentJwtService: AgentJwtService,
     private readonly agentTokenStorageService: AgentTokenStorageService,
@@ -44,14 +48,22 @@ export class AgentService {
     if (existingAgent) {
       throw new ConflictException('Agent with this email already exists');
     }
-
+    const agentId = await this.generateAgentId();
     // Create agent without password (status: pending)
     const newAgent = new this.agentModel({
       ...registerAgentDto,
       status: AgentStatus.PENDING,
+      agentId,
     });
 
     await newAgent.save();
+
+    // Send registration confirmation email
+    await this.emailService.sendAgentRegistrationSuccess(registerAgentDto.email, {
+      name: registerAgentDto.name,
+      email: registerAgentDto.email,
+      agentId,
+    });
 
     // Return without password field
     const agentObject = newAgent.toObject();
@@ -450,5 +462,26 @@ export class AgentService {
   //   // Integrate with SMS provider (Twilio, AWS SNS, etc.)
   //   this.logger.log(`SMS would be sent to ${phoneNumber} with password: ${password}`);
   // }
+  async generateAgentId(): Promise<string> {
+    const year = new Date().getFullYear();
+    const key = `agent-${year}`;
+  
+    const counter = await this.agentCounterModel.findOneAndUpdate(
+      { key },
+      { $inc: { seq: 1 } },
+      { new: true, upsert: true }
+    );
+  
+    return `APP-${year}-${String(counter.seq).padStart(6, '0')}`;
+  }
+
+  // Get agent by email (Public)
+  async getAgentByEmail(agentId: string): Promise<Agent> {
+    const agent = await this.agentModel.findOne({ agentId });
+    if (!agent) {
+      throw new NotFoundException('Agent not found');
+    }
+    return agent;
+  }
 }
 
