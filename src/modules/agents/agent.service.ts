@@ -5,24 +5,27 @@ import {
   BadRequestException,
   UnauthorizedException,
   Logger,
-} from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import * as bcrypt from 'bcrypt';
-import { Agent, AgentDocument, AgentStatus } from './schemas/agent.schema';
-import { RegisterAgentDto } from './dto/register-agent.dto';
-import { ApproveAgentDto } from './dto/approve-agent.dto';
-import { AgentLoginDto } from './dto/agent-login.dto';
-import { ResetPasswordDto } from './dto/reset-password.dto';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { generatePassword } from './utils/password-generator';
-import { EmailService } from '../../infra/email/email.service';
-import { AgentJwtService } from './services/agent-jwt.service';
-import { AgentTokenStorageService } from './services/agent-token-storage.service';
-import { AgentOtpService } from './services/agent-otp.service';
-import { v4 as uuidv4 } from 'uuid';
-import { AgentCounter } from './schemas/agent.counter.schema';
-import { AgentProfile, AgentProfileDocument } from './schemas/agent.profile.schema';
+} from "@nestjs/common";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model } from "mongoose";
+import * as bcrypt from "bcrypt";
+import { Agent, AgentDocument, AgentStatus } from "./schemas/agent.schema";
+import { RegisterAgentDto } from "./dto/register-agent.dto";
+import { ApproveAgentDto } from "./dto/approve-agent.dto";
+import { AgentLoginDto } from "./dto/agent-login.dto";
+import { ResetPasswordDto } from "./dto/reset-password.dto";
+import { RefreshTokenDto } from "./dto/refresh-token.dto";
+import { generatePassword } from "./utils/password-generator";
+import { EmailService } from "../../infra/email/email.service";
+import { AgentJwtService } from "./services/agent-jwt.service";
+import { AgentTokenStorageService } from "./services/agent-token-storage.service";
+import { AgentOtpService } from "./services/agent-otp.service";
+import { v4 as uuidv4 } from "uuid";
+import { AgentCounter } from "./schemas/agent.counter.schema";
+import {
+  AgentProfile,
+  AgentProfileDocument,
+} from "./schemas/agent.profile.schema";
 
 @Injectable()
 export class AgentService {
@@ -62,11 +65,14 @@ export class AgentService {
     await newAgent.save();
 
     // Send registration confirmation email
-    await this.emailService.sendAgentRegistrationSuccess(registerAgentDto.email, {
-      name: registerAgentDto.name,
-      email: registerAgentDto.email,
-      agentId,
-    });
+    await this.emailService.sendAgentRegistrationSuccess(
+      registerAgentDto.email,
+      {
+        name: registerAgentDto.name,
+        email: registerAgentDto.email,
+        agentId,
+      },
+    );
 
     // Return without password field
     const agentObject = newAgent.toObject();
@@ -75,10 +81,16 @@ export class AgentService {
   }
 
   // Get all agents (for admin)
-  async getAllAgents(status?: AgentStatus): Promise<Agent[]> {
+  async getAllApplications(status?: AgentStatus): Promise<Agent[]> {
     const filter = status ? { status } : {};
     return this.agentModel
       .find(filter)
+      .select("-password -bankDetails -governmentId -createdAt -updatedAt")
+      .lean();
+  }
+  async getAllAgents(): Promise<AgentProfile[]> {
+    return this.agentProfileModel
+      .find()
       .select("-password -bankDetails -governmentId -createdAt -updatedAt")
       .lean();
   }
@@ -179,7 +191,7 @@ export class AgentService {
 
   // Agent Login with JWT tokens (supports email OR phoneNumber)
   async agentLogin(agentLoginDto: AgentLoginDto): Promise<{
-    agent: Agent;
+    agent: AgentProfile;
     accessToken: string;
     refreshToken: string;
     sessionId: string;
@@ -203,7 +215,7 @@ export class AgentService {
     }
 
     // Find agent with password field
-    const agent = await this.agentModel.findOne(query).select("+password");
+    const agent = await this.agentModel.findOne(query).select("-password");
 
     if (!agent) {
       throw new UnauthorizedException("Invalid credentials");
@@ -215,12 +227,19 @@ export class AgentService {
       );
     }
 
-    if (!agent.password) {
+    const agentProfile = await this.agentProfileModel
+      .findOne(query)
+      .select("+password");
+
+    if (!agentProfile?.password) {
       throw new UnauthorizedException("No password set. Please contact admin.");
     }
 
     // Verify password
-    const isPasswordValid = await bcrypt.compare(password, agent.password);
+    const isPasswordValid = await bcrypt.compare(
+      password,
+      agentProfile.password,
+    );
 
     if (!isPasswordValid) {
       throw new UnauthorizedException("Invalid email or password");
@@ -231,8 +250,8 @@ export class AgentService {
 
     // Generate tokens
     const tokenPayload = {
-      agentId: agent._id.toString(),
-      email: agent.email,
+      agentId: agentProfile._id.toString(),
+      email: agentProfile.email,
       sessionId,
     };
 
@@ -243,12 +262,12 @@ export class AgentService {
     // Store refresh token in Redis
     await this.agentTokenStorageService.storeTokens(
       sessionId,
-      agent._id.toString(),
+      agentProfile._id.toString(),
       refreshToken,
     );
 
     // Return agent without password
-    const agentObject = agent.toObject();
+    const agentObject = agentProfile.toObject();
     delete agentObject.password;
 
     return {
@@ -267,7 +286,9 @@ export class AgentService {
   ): Promise<{ message: string }> {
     const { currentPassword, newPassword } = resetPasswordDto;
 
-    const agent = await this.agentModel.findById(agentId).select("+password");
+    const agent = await this.agentProfileModel
+      .findById(agentId)
+      .select("+password");
 
     if (!agent) {
       throw new NotFoundException("Agent not found");
@@ -436,6 +457,14 @@ export class AgentService {
       throw new NotFoundException("Agent not found");
     }
 
+    if (agent.status !== AgentStatus.APPROVED) {
+      throw new BadRequestException("Only approved agents can verify");
+    }
+    const agentProfile = await this.agentProfileModel.findOne(query);
+    if (!agentProfile) {
+      throw new NotFoundException("Agent profile not found");
+    }
+
     // Verify OTP (email or phone)
     if (email) {
       await this.agentOtpService.verifyOTP(email, otp);
@@ -444,15 +473,15 @@ export class AgentService {
     }
 
     // Mark email as verified
-    (agent as any).isemailverified = true;
-    await agent.save();
+    (agentProfile as any).isemailverified = true;
+    await agentProfile.save();
 
     // Generate tokens for the agent
     const sessionId = this.agentJwtService.generateSessionId();
 
     const tokenPayload = {
-      agentId: agent._id.toString(),
-      email: agent.email,
+      agentId: agentProfile._id.toString(),
+      email: agentProfile.email,
       sessionId,
     };
 
@@ -463,7 +492,7 @@ export class AgentService {
     // Store refresh token in Redis
     await this.agentTokenStorageService.storeTokens(
       sessionId,
-      agent._id.toString(),
+      agentProfile._id.toString(),
       refreshToken,
     );
 
@@ -483,21 +512,21 @@ export class AgentService {
   async generateAgentId(): Promise<string> {
     const year = new Date().getFullYear();
     const key = `agent-${year}`;
-  
+
     const counter = await this.agentCounterModel.findOneAndUpdate(
       { key },
       { $inc: { seq: 1 } },
-      { new: true, upsert: true }
+      { new: true, upsert: true },
     );
-  
-    return `APP-${year}-${String(counter.seq).padStart(6, '0')}`;
+
+    return `APP-${year}-${String(counter.seq).padStart(6, "0")}`;
   }
 
   // Get agent by email (Public)
   async getAgentByEmail(agentId: string): Promise<Agent> {
     const agent = await this.agentModel.findOne({ agentId });
     if (!agent) {
-      throw new NotFoundException('Agent not found');
+      throw new NotFoundException("Agent not found");
     }
     return agent;
   }

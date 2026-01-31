@@ -48,7 +48,7 @@ export type AgentProfileDocument = AgentProfile & Document;
 export class AgentProfile {
   @Prop({ required: true })
   agentId: string;
-  
+
   @Prop({ required: true })
   name: string;
 
@@ -86,4 +86,4 @@ export class AgentProfile {
   updatedAt: Date;
 }
 
-export const AgentSchema = SchemaFactory.createForClass(AgentProfile);
+export const AgentProfileSchema = SchemaFactory.createForClass(AgentProfile);
