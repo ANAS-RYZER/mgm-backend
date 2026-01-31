@@ -1,0 +1,134 @@
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+  Put,
+  Req,
+  UseGuards,
+} from "@nestjs/common";
+import { ProductsService } from "./products.service";
+import { AddProductDto } from "./dto/add.product.dto";
+import { AdminJwtAuthGuard } from "../admins/guards/admin-jwt-auth.guard";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt-auth.guard";
+import { Categories } from "./interfaces/product.interface";
+import { UpdateProductDto } from "./dto/update.product.dto";
+
+@Controller("products")
+export class ProductsController {
+  constructor(private readonly productsService: ProductsService) {}
+
+  @Post("/add-product")
+  @HttpCode(HttpStatus.CREATED)
+  @UseGuards(AdminJwtAuthGuard)
+  async addProduct(@Body() addProductDto: AddProductDto) {
+    return this.productsService.addProduct(addProductDto);
+  }
+  @Get("/all")
+  @HttpCode(HttpStatus.OK)
+  async getAllProducts(
+    @Query("search") search?: string,
+    @Query("category") category?: Categories,
+    @Query("sortPrice") sortPrice?: "asc" | "desc",
+    @Query("page") page = "1",
+    @Query("limit") limit = "10",
+  ) {
+    const result = await this.productsService.getAllProducts(
+      search,
+      category,
+      sortPrice,
+      Number(page),
+      Number(limit),
+    );
+
+    return {
+      data: result.products,
+      pagination: {
+        page: result.page,
+        limit: result.limit,
+        currentPage: result.currentPage,
+        hasNextPage: result.hasNextPage,
+        hasPreviousPage: result.hasPreviousPage,
+        totalCount: result.totalCount,
+        totalPages: result.totalPages,
+      },
+    };
+  }
+
+
+  @Get("/:id")
+  @HttpCode(HttpStatus.OK)
+  async getProductById(@Param("id") productId: string) {
+    return this.productsService.getProductById(productId);
+  }
+
+  @Get("user/:id/detail")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(OptionalJwtAuthGuard)
+  async getProductuserById(
+    @Param("id") productId: string,
+    @Req() req: any,
+  ) {
+    // Automatically get userId from token if authenticated, otherwise undefined
+    const userId = req.user?.userId;
+    return this.productsService.getProductuserById(productId, userId);
+  }
+
+  @Put("/update/:id")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AdminJwtAuthGuard)
+  async updateProduct(
+    @Param("id") productId: string,
+    @Body() updateProductDto: UpdateProductDto,
+  ) {
+    return this.productsService.updateProduct(productId, updateProductDto);
+  }
+
+  @Get('user/all')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(OptionalJwtAuthGuard)
+  async getAllProductsForUser(
+    @Req() req: any,
+    @Query('search') search?: string,
+    @Query('category') category?: Categories,
+    @Query('sortPrice') sortPrice?: 'asc' | 'desc',
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+    @Query('wishlist') wishlist?: 'true' | 'false',
+  ) {
+    // Automatically get userId from token if authenticated, otherwise undefined
+    const userId = req.user?.userId;
+    
+    const result = await this.productsService.getAllProductsForUser(
+      {
+        search,
+        category,
+        sortPrice,
+        wishlist,
+        page: Number(page),
+        limit: Number(limit),
+      },
+      userId,
+    );
+
+    return {
+      data: result.products,
+      pagination: {
+        page: result.page,
+        limit: result.limit,
+        currentPage: result.currentPage,
+        hasNextPage: result.hasNextPage,
+        hasPreviousPage: result.hasPreviousPage,
+        totalCount: result.totalCount,
+        totalPages: result.totalPages,
+      },
+    };
+  }
+
+}

@@ -173,5 +173,22 @@ export class EmailService {
       context,
     );
   }
+
+  /**
+   * Send agent credentials email
+   * @param email - Agent email address
+   * @param context - Context with name, email, password, and loginUrl
+   */
+  async sendAgentCredentials(
+    email: string,
+    context: { name: string; email: string; password: string; loginUrl?: string },
+  ): Promise<void> {
+    await this.sendEmail(
+      email,
+      'Your Agent Account Has Been Approved - Login Credentials',
+      'agent-credentials',
+      context,
+    );
+  }
 }
 

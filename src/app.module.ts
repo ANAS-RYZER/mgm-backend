@@ -10,6 +10,10 @@ import { AssetsModule } from './modules/assets/assets.module';
 import { RedisModule } from './infra/redis/redis.module';
 import { MongodbModule } from './infra/mongodb/mongodb.module';
 import { EmailModule } from './infra/email/email.module';
+import { ProductsModule } from './modules/products/products.module';
+import { WishlistModule } from './modules/wishlist/wishlist.module';
+import { AgentModule } from './modules/agents/agent.module';
+
 
 @Module({
   imports: [
@@ -24,6 +28,9 @@ import { EmailModule } from './infra/email/email.module';
     RedisModule,
     MongodbModule,
     EmailModule,
+    ProductsModule,
+    WishlistModule,
+    AgentModule,
   ],
   controllers: [AppController],
   providers: [AppService],

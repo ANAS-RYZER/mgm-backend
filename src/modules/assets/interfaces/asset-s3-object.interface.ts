@@ -1,5 +1,5 @@
 export enum IS3ObjectType {
-  COMPANY = 'company',
+  PRODUCT = 'product',
   USER = 'user',
 }
 
