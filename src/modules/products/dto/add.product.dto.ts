@@ -10,7 +10,6 @@ import {
 } from "class-validator";
 import {
   Categories,
-  ProductStatus,
 } from "../interfaces/product.interface";
 
 import { StoneDetailsDto } from "./stone-details.dto";
@@ -52,11 +51,19 @@ export class AddProductDto {
   goldSpecs: GoldSpecsDto;
 
   @IsOptional()
+  @IsString()
+  image?: string;
+
+  @IsOptional()
+  @IsString()
+  material?: string;
+  
+
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => StoneDetailsDto)
   stoneSpecs?: StoneDetailsDto[];
 
-  @IsEnum(ProductStatus)
-  status: ProductStatus;
+ 
 }

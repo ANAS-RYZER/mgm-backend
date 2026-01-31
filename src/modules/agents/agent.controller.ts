@@ -139,6 +139,7 @@ export class AgentController {
     };
   }
 
+
   // Logout (Requires agent to be logged in)
   @Post('logout')
   @HttpCode(HttpStatus.OK)
@@ -179,6 +180,15 @@ export class AgentController {
       verifyOtpDto.phoneNumber,
     );
     return result;
+  }
+
+
+  // Get agent by email (Public)
+  @Get(':id/application')
+  @HttpCode(HttpStatus.OK)
+  async getAgentApplication(@Param('id') agentId: string) {
+    const agent = await this.agentService.getAgentByEmail(agentId);
+    return agent;
   }
 }
 

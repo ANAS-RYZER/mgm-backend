@@ -1,24 +1,26 @@
-import { Module } from "@nestjs/common";
-import { MongooseModule } from "@nestjs/mongoose";
-import { JwtModule, JwtModuleOptions } from "@nestjs/jwt";
-import { ConfigModule, ConfigService } from "@nestjs/config";
-import { Agent, AgentSchema } from "./schemas/agent.schema";
-import { AgentController } from "./agent.controller";
-import { AgentService } from "./agent.service";
-import { AgentJwtService } from "./services/agent-jwt.service";
-import { AgentTokenStorageService } from "./services/agent-token-storage.service";
-import { AgentOtpService } from "./services/agent-otp.service";
-import { AgentJwtAuthGuard } from "./guards/agent-jwt-auth.guard";
-import { AdminAuthModule } from "../admins/admin-auth.module";
-import { EmailModule } from "../../infra/email/email.module";
-import { RedisModule } from "../../infra/redis/redis.module";
-import { AgentProfile } from "./schemas/agent.profile.schema";
+import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { Agent, AgentSchema } from './schemas/agent.schema';
+import { AgentCounter, AgentCounterSchema } from './schemas/agent.counter.schema';
+import { AgentController } from './agent.controller';
+import { AgentService } from './agent.service';
+import { AgentJwtService } from './services/agent-jwt.service';
+import { AgentTokenStorageService } from './services/agent-token-storage.service';
+import { AgentOtpService } from './services/agent-otp.service';
+import { AgentJwtAuthGuard } from './guards/agent-jwt-auth.guard';
+import { AdminAuthModule } from '../admins/admin-auth.module';
+import { EmailModule } from '../../infra/email/email.module';
+import { RedisModule } from '../../infra/redis/redis.module';
+import { AgentProfile } from './schemas/agent.profile.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: Agent.name, schema: AgentSchema },
       { name: AgentProfile.name, schema: AgentProfile },
+      { name: AgentCounter.name, schema: AgentCounterSchema },
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
