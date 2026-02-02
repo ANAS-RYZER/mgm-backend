@@ -110,12 +110,7 @@ export class AgentController {
   @HttpCode(HttpStatus.OK)
   async agentLogin(@Body() agentLoginDto: AgentLoginDto) {
     const result = await this.agentService.agentLogin(agentLoginDto);
-    return {
-      message: result.message,
-      accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
-      sessionId: result.sessionId,
-    };
+    return result
   }
 
   // Agent Reset Password (Requires agent to be logged in)
