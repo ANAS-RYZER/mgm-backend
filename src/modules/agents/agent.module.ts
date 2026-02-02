@@ -20,6 +20,9 @@ import {
   AgentProfile,
   AgentProfileSchema,
 } from "./schemas/agent.profile.schema";
+import { AgentDashboardController } from "./dashboard/agent.dashboard.controller";
+import { AgentDashboardService } from "./dashboard/agent.dashboard.service";
+import { User, UserSchema } from "../users/schemas/user.schema";
 
 @Module({
   imports: [
@@ -27,6 +30,7 @@ import {
       { name: Agent.name, schema: AgentSchema },
       { name: AgentProfile.name, schema: AgentProfileSchema },
       { name: AgentCounter.name, schema: AgentCounterSchema },
+      { name: User.name, schema: UserSchema },
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -52,13 +56,14 @@ import {
     RedisModule, // Import for Redis/Session storage
     ConfigModule,
   ],
-  controllers: [AgentController],
+  controllers: [AgentController, AgentDashboardController],
   providers: [
     AgentService,
     AgentJwtService,
     AgentTokenStorageService,
     AgentOtpService,
     AgentJwtAuthGuard,
+    AgentDashboardService,
   ],
   exports: [AgentService, AgentJwtAuthGuard, AgentJwtService],
 })
