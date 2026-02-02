@@ -177,11 +177,11 @@ export class EmailService {
   /**
    * Send agent registration success email
    * @param email - Agent email address
-   * @param context - Context with name, email, and agentId
+    * @param context - Context with name, email, and applicationId
    */
   async sendAgentRegistrationSuccess(
     email: string,
-    context: { name: string; email: string; agentId: string },
+    context: { name: string; email: string; applicationId: string },
   ): Promise<void> {
     await this.sendEmail(
       email,
