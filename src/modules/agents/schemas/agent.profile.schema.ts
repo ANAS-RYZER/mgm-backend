@@ -46,7 +46,7 @@ export type AgentProfileDocument = AgentProfile & Document;
 
 @Schema({ timestamps: true })
 export class AgentProfile {
-  @Prop({ required: true })
+  @Prop({ required: true, unique: true })
   agentId: string;
 
   @Prop({ required: true })
@@ -78,6 +78,9 @@ export class AgentProfile {
 
   @Prop({ default: false })
   ispasswordchanged: boolean;
+
+  @Prop({ unique: true, sparse: true })
+  referralCode?: string;
 
   @Prop()
   createdAt: Date;

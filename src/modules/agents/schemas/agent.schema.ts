@@ -65,8 +65,8 @@ export class Agent {
   @Prop({ required: true })
   dob: Date;
 
-  @Prop({ required: true })
-  agentId: string;
+  @Prop({ required: true, unique: true })
+  applicationId: string;
 
   @Prop({ type: BankDetailsSchema, required: true })
   bankDetails: BankDetails;

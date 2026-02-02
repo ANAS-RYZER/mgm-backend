@@ -54,12 +54,12 @@ export class AgentService {
     if (existingAgent) {
       throw new ConflictException("Agent with this email already exists");
     }
-    const agentId = await this.generateAgentId();
+    const applicationId = await this.generateApplicationId();
     // Create agent without password (status: pending)
     const newAgent = new this.agentModel({
       ...registerAgentDto,
       status: AgentStatus.PENDING,
-      agentId,
+      applicationId,
     });
 
     await newAgent.save();
@@ -70,7 +70,7 @@ export class AgentService {
       {
         name: registerAgentDto.name,
         email: registerAgentDto.email,
-        agentId,
+        applicationId: newAgent.applicationId,
       },
     );
 
@@ -85,7 +85,7 @@ export class AgentService {
     const filter = status ? { status } : {};
     return this.agentModel
       .find(filter)
-      .select("-password -bankDetails -governmentId -createdAt -updatedAt")
+      .select("-password -bankDetails -governmentId -createdAt -updatedAt ")
       .lean();
   }
   async getAllAgents(): Promise<AgentProfile[]> {
@@ -108,7 +108,8 @@ export class AgentService {
   async updateAgentStatus(
     agentId: string,
     approveAgentDto: ApproveAgentDto,
-  ): Promise<{ agent: Agent; password?: string }> {
+   
+  ): Promise<{ agent: Agent; password?: string; referralCode: string; agentId: string }> {
     const agent = await this.agentModel.findById(agentId);
 
     if (!agent) {
@@ -125,9 +126,11 @@ export class AgentService {
     if (status === AgentStatus.APPROVED) {
       const generatedPassword = generatePassword(10);
       const hashedPassword = await bcrypt.hash(generatedPassword, 10);
+      const agentId = await this.generateAgentId();
 
       const agentProfile = await this.agentProfileModel.create({
-        agentId: "12345", // TODO: Replace with actual agent ID
+        agentId,
+        referralCode: agentId,
         email: agent.email,
         phoneNumber: agent.phoneNumber,
         name: agent.name,
@@ -167,7 +170,10 @@ export class AgentService {
 
       return {
         agent: agentObject,
-        password: generatedPassword, // Return plain password for admin to share
+        password: generatedPassword, 
+        referralCode: agentProfile?.referralCode || "",
+        agentId: agentProfile.agentId,
+        // Return plain password for admin to share
       };
     }
 
@@ -186,6 +192,8 @@ export class AgentService {
 
     return {
       agent: agentObject,
+      referralCode: agentObject?.referralCode || "",
+      agentId: agentObject?.agentId || "",
     };
   }
 
@@ -381,6 +389,11 @@ export class AgentService {
     return { message: "Logged out from all devices successfully" };
   }
 
+  /** @deprecated Use getAgentByApplicationId. Kept for backwards compatibility. */
+  async getAgentByEmail(applicationId: string): Promise<Agent> {
+    return this.getAgentByApplicationId(applicationId);
+  }
+
   // Send OTP to agent email or phone
   async sendOtp(
     email?: string,
@@ -509,9 +522,10 @@ export class AgentService {
   //   // Integrate with SMS provider (Twilio, AWS SNS, etc.)
   //   this.logger.log(`SMS would be sent to ${phoneNumber} with password: ${password}`);
   // }
-  async generateAgentId(): Promise<string> {
+  /** Application ID for registrations (e.g. APP-2026-000001). Uses counter key: application-YYYY */
+  async generateApplicationId(): Promise<string> {
     const year = new Date().getFullYear();
-    const key = `agent-${year}`;
+    const key = `application-${year}`;
 
     const counter = await this.agentCounterModel.findOneAndUpdate(
       { key },
@@ -522,9 +536,32 @@ export class AgentService {
     return `APP-${year}-${String(counter.seq).padStart(6, "0")}`;
   }
 
-  // Get agent by email (Public)
-  async getAgentByEmail(agentId: string): Promise<Agent> {
-    const agent = await this.agentModel.findOne({ agentId });
+  /** Agent ID for approved agents (2 letters + 5 digits, e.g. AA00001). Uses counter key: agent */
+  async generateAgentId(): Promise<string> {
+    const key = "agent";
+
+    const counter = await this.agentCounterModel.findOneAndUpdate(
+      { key },
+      { $inc: { seq: 1 } },
+      { new: true, upsert: true },
+    );
+
+    return this.seqToAgentIdFormat(counter.seq);
+  }
+
+  /** Format: 2 letters + 5 digits, e.g. AA00001, AB00002, AZ00026, BA00027 */
+  private seqToAgentIdFormat(seq: number): string {
+    const n = (seq - 1) % 676;
+    const first = Math.floor(n / 26);
+    const second = n % 26;
+    const letters = String.fromCharCode(65 + first, 65 + second);
+    const numbers = String(seq).padStart(5, "0");
+    return `${letters}${numbers}`;
+  }
+
+
+  async getAgentByApplicationId(applicationId: string): Promise<Agent> {
+    const agent = await this.agentModel.findOne({ applicationId });
     if (!agent) {
       throw new NotFoundException("Agent not found");
     }
