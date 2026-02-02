@@ -20,17 +20,17 @@ import { AdminJwtAuthGuard } from './guards/admin-jwt-auth.guard';
 export class AdminAuthController {
   constructor(private readonly adminAuthService: AdminAuthService) {}
 
-  @Post('signup')
-  @HttpCode(HttpStatus.CREATED)
-  async signup(@Body() signupDto: AdminSignupDto) {
-    return this.adminAuthService.signup(signupDto);
-  }
+  // @Post('signup')
+  // @HttpCode(HttpStatus.CREATED)
+  // async signup(@Body() signupDto: AdminSignupDto) {
+  //   return this.adminAuthService.signup(signupDto);
+  // }
 
-  @Post('verify-otp')
-  @HttpCode(HttpStatus.OK)
-  async verifyOtp(@Body() verifyOtpDto: AdminVerifyOtpDto) {
-    return this.adminAuthService.verifyOtp(verifyOtpDto);
-  }
+  // @Post('verify-otp')
+  // @HttpCode(HttpStatus.OK)
+  // async verifyOtp(@Body() verifyOtpDto: AdminVerifyOtpDto) {
+  //   return this.adminAuthService.verifyOtp(verifyOtpDto);
+  // }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
@@ -55,17 +55,17 @@ export class AdminAuthController {
     return this.adminAuthService.logout(sessionId);
   }
 
-  @Get()
-  @UseGuards(AdminJwtAuthGuard)
-  async getProfile(@Request() req) {
-    const adminId = req.user?.adminId;
-    return this.adminAuthService.getProfile(adminId);
-  }
+  // @Get()
+  // @UseGuards(AdminJwtAuthGuard)
+  // async getProfile(@Request() req) {
+  //   const adminId = req.user?.adminId;
+  //   return this.adminAuthService.getProfile(adminId);
+  // }
 
-  @Post('resend-otp')
-  @HttpCode(HttpStatus.OK)
-  async resendOtp(@Body() resendOtpDto: AdminResendOtpDto) {
-    return this.adminAuthService.resendOtp(resendOtpDto.email);
-  }
+  // @Post('resend-otp')
+  // @HttpCode(HttpStatus.OK)
+  // async resendOtp(@Body() resendOtpDto: AdminResendOtpDto) {
+  //   return this.adminAuthService.resendOtp(resendOtpDto.email);
+  // }
 }
 

@@ -42,7 +42,7 @@ export class AgentController {
   // Get all agents (Admin only)
   @Get("/applications")
   @HttpCode(HttpStatus.OK)
-  // @UseGuards(AdminJwtAuthGuard)
+  @UseGuards(AdminJwtAuthGuard)
   async getAllApplications(@Query("status") status?: AgentStatus) {
     const agents = await this.agentService.getAllApplications(status);
     return {
@@ -53,7 +53,7 @@ export class AgentController {
 
   @Get("/")
   @HttpCode(HttpStatus.OK)
-  // @UseGuards(AdminJwtAuthGuard)
+  @UseGuards(AdminJwtAuthGuard)
   async getAllAgents() {
     const agents = await this.agentService.getAllAgents();
     return {
@@ -65,7 +65,7 @@ export class AgentController {
   // Get agent by ID (Admin only)
   @Get("/applications/:id")
   @HttpCode(HttpStatus.OK)
-  // @UseGuards(AdminJwtAuthGuard)
+  @UseGuards(AdminJwtAuthGuard)
   async getAgentById(@Param("id") agentId: string) {
     const agent = await this.agentService.getAgentById(agentId);
     return {
@@ -77,7 +77,7 @@ export class AgentController {
   // Admin approves/rejects agent (Admin only)
   @Put("/application/:id/status")
   @HttpCode(HttpStatus.OK)
-  // @UseGuards(AdminJwtAuthGuard)
+  @UseGuards(AdminJwtAuthGuard)
   async updateAgentStatus(
     @Param("id") agentId: string,
     @Body() approveAgentDto: ApproveAgentDto,
