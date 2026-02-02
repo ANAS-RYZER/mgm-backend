@@ -191,11 +191,13 @@ export class AgentService {
 
   // Agent Login with JWT tokens (supports email OR phoneNumber)
   async agentLogin(agentLoginDto: AgentLoginDto): Promise<{
-    agent: AgentProfile;
+    isNewUser: boolean;
+    isPasswordChanged: boolean;
     accessToken: string;
     refreshToken: string;
     sessionId: string;
     message: string;
+    user: { userId: string; email: string; name: string };
   }> {
     const { email, phoneNumber, password } = agentLoginDto;
 
@@ -267,11 +269,15 @@ export class AgentService {
     );
 
     // Return agent without password
-    const agentObject = agentProfile.toObject();
-    delete agentObject.password;
 
     return {
-      agent: agentObject,
+      isNewUser: agentProfile.isnewuser,
+      isPasswordChanged: agentProfile.ispasswordchanged,
+      user: {
+        userId: agentProfile._id.toString(),
+        email: agentProfile.email,
+        name: agentProfile.name,
+      },
       accessToken,
       refreshToken,
       sessionId,
