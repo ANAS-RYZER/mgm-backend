@@ -35,7 +35,7 @@ export class AuthService {
     token: string;
     message: string;
   }> {
-    const { email, password, fullName } = signupDto;
+    const { email, password, fullName , refId = "001" } = signupDto;
 
     // Normalize email to lowercase
     const normalizedEmail = email.toLowerCase();
@@ -54,6 +54,7 @@ export class AuthService {
       email: normalizedEmail,
       password: hashedPassword,
       fullName,
+      refId,
       isEmailVerified: false,
     });
 

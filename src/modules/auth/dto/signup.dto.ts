@@ -11,5 +11,8 @@ export class SignupDto {
 
   @IsOptional()
   fullName?: string;
+
+  @IsOptional()
+  refId?: string;
 }
 
