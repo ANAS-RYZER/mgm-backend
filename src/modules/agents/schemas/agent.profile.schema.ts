@@ -46,7 +46,7 @@ export type AgentProfileDocument = AgentProfile & Document;
 
 @Schema({ timestamps: true })
 export class AgentProfile {
-  @Prop({ required: true, unique: true })
+  @Prop({ required: true })
   agentId: string;
 
   @Prop({ required: true })
