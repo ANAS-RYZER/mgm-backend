@@ -14,6 +14,7 @@ import { ProductsModule } from './modules/products/products.module';
 import { WishlistModule } from './modules/wishlist/wishlist.module';
 import { AgentModule } from './modules/agents/agent.module';
 import { UserRequestsModule } from './modules/user-requests/user-requests.module';
+import { PriceModule } from './modules/price/price.module';
 
 
 @Module({
@@ -33,6 +34,7 @@ import { UserRequestsModule } from './modules/user-requests/user-requests.module
     WishlistModule,
     AgentModule,
     UserRequestsModule,
+    PriceModule,
   ],
   controllers: [AppController],
   providers: [AppService],
