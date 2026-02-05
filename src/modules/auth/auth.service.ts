@@ -349,6 +349,7 @@ export class AuthService {
     fullName: string;
     email: string;
     avatar: string;
+    userId: string;
   }> {
     const user = await this.userModel.findById(userId).select('fullName email avatar').lean();
     
@@ -360,6 +361,7 @@ export class AuthService {
       fullName: user.fullName || '',
       email: user.email,
       avatar: user.avatar,
+      userId: user._id.toString() ,
     };
   }
 

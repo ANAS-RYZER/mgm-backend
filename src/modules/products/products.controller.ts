@@ -68,6 +68,7 @@ export class ProductsController {
   @Get("/:id")
   @HttpCode(HttpStatus.OK)
   async getProductById(@Param("id") productId: string) {
+    console.log("hello product id");
     return this.productsService.getProductById(productId);
   }
 
