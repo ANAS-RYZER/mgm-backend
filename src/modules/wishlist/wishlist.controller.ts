@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { WishlistService } from './wishlist.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 
 @Controller('wishlist')
 @UseGuards(JwtAuthGuard)
@@ -16,12 +17,12 @@ export class WishlistController {
 
   // Toggle wishlist
   @Put('toggle')
+  // @UseGuards(OptionalJwtAuthGuard)
   async toggleWishlist(
     @Query('productId') productId: string,
     @Req() req: any,
   ) {
     const userId = req.user.userId;
-
     const isWishlisted = await this.wishlistService.toggleWishlist(
       productId,
       userId,
