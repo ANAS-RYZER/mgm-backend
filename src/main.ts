@@ -19,13 +19,17 @@ async function bootstrap() {
     }),
   );
 
-  // Get allowed origins from environment variable (comma-separated)
-  // Default to localhost for development
-  const allowedOrigins = configService
+  // Get allowed origins: merge env var with defaults so localhost always works
+  const defaultOrigins = [
+    'http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173', 'http://localhost:5174',
+    'https://mgm-admin-amber.vercel.app', 'https://mgm-agent-form.vercel.app', 'https://mgm-user.vercel.app',
+  ];
+  const envOrigins = configService
     .get<string>("ALLOWED_ORIGINS")
     ?.split(",")
     .map((origin) => origin.trim())
-    .filter((origin) => origin) || ['http://localhost:3000', 'http://localhost:3001' , "https://mgm-admin-amber.vercel.app" , 'https://mgm-agent-form.vercel.app' , 'https://mgm-user.vercel.app' , "http://localhost:5173" , "http://localhost:5174"];
+    .filter((origin) => origin) || [];
+  const allowedOrigins = [...new Set([...envOrigins, ...defaultOrigins])];
   
   // Enable CORS with limited origins
   app.enableCors({
