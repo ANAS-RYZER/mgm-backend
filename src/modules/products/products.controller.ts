@@ -73,18 +73,6 @@ export class ProductsController {
     return this.productsService.getProductById(productId);
   }
 
-  @Get("user/:id/detail")
-  @HttpCode(HttpStatus.OK)
-  @UseGuards(OptionalJwtAuthGuard)
-  async getProductuserById(
-    @Param("id") productId: string,
-    @Req() req: any,
-  ) {
-    // Automatically get userId from token if authenticated, otherwise undefined
-    const userId = req.user?.userId;
-    return this.productsService.getProductuserById(productId, userId);
-  }
-
   @Put("/update/:id")
   @HttpCode(HttpStatus.OK)
   @UseGuards(AdminJwtAuthGuard)
@@ -95,36 +83,6 @@ export class ProductsController {
     return this.productsService.updateProduct(productId, updateProductDto);
   }
 
-  @Get('user/all')
-  @HttpCode(HttpStatus.OK)
-  @UseGuards(OptionalJwtAuthGuard)
-  async getAllProductsForUser(
-    @Req() req: any,
-    @Query('search') search?: string,
-    @Query('category') category?: Categories,
-    @Query('sortPrice') sortPrice?: 'asc' | 'desc',
-    @Query('page') page = '1',
-    @Query('limit') limit = '10',
-    @Query('wishlist') wishlist?: 'true' | 'false',
-  ) {
-    // Automatically get userId from token if authenticated, otherwise undefined
-    const userId = req.user?.userId;
-    
-    const result = await this.productsService.getAllProductsForUser(
-      {
-        search,
-        category,
-        sortPrice,
-        wishlist,
-    
-      },
-      userId,
-    );
 
-    return {
-      data: result.products,
-    
-    };
-  }
 
 }
