@@ -50,13 +50,13 @@ export class PriceService {
   }
 
   async getAllPrices(): Promise<{
-    data: Record<string, Array<{ name: string; price: number }>>;
+    data: Record<string, Array<{ _id: any; name: string; price: number }>>;
     count: number;
   }> {
     try {
       const prices = await this.priceModel
         .find()
-        .select('name price type -_id')
+        .select('name price type _id')
         .sort({ createdAt: -1 })
         .lean()
         .exec();
@@ -64,7 +64,7 @@ export class PriceService {
       // Group prices by type
       const groupedPrices: Record<
         string,
-        Array<{ name: string; price: number }>
+        Array<{ _id: any; name: string; price: number }>
       > = {};
 
       prices.forEach((price: any) => {
@@ -73,6 +73,7 @@ export class PriceService {
           groupedPrices[type] = [];
         }
         groupedPrices[type].push({
+          _id: price._id,
           name: price.name,
           price: price.price,
         });
