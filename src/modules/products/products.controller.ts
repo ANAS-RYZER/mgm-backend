@@ -31,6 +31,7 @@ export class ProductsController {
   @UseInterceptors(NormalizeStoneSpecsInterceptor)
   // @UseGuards(AdminJwtAuthGuard)
   async addProduct(@Body() addProductDto: AddProductDto) {
+    console.log("addProductDto", addProductDto);
     return this.productsService.addProduct(addProductDto);
   }
   @Get("/all")
@@ -115,23 +116,14 @@ export class ProductsController {
         category,
         sortPrice,
         wishlist,
-        page: Number(page),
-        limit: Number(limit),
+    
       },
       userId,
     );
 
     return {
       data: result.products,
-      pagination: {
-        page: result.page,
-        limit: result.limit,
-        currentPage: result.currentPage,
-        hasNextPage: result.hasNextPage,
-        hasPreviousPage: result.hasPreviousPage,
-        totalCount: result.totalCount,
-        totalPages: result.totalPages,
-      },
+    
     };
   }
 

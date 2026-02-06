@@ -66,6 +66,10 @@ export enum DiamondColor {
   Z = "Z",
 }
 
+export enum StoneType {
+  DIAMOND = "diamond",
+  GEMSTONE = "gemstone",
+}
 export enum GemstoneColor {
   VIVID_GREEN = "vivid-green",
   GREEN = "green",
