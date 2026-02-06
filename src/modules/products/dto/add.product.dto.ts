@@ -17,9 +17,8 @@ import { GoldSpecsDto } from "./gold-specs.dto";
 
 
 export class AddProductDto {
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  sku: string;
 
   @IsString()
   @IsNotEmpty()
@@ -52,6 +51,10 @@ export class AddProductDto {
 
   @IsOptional()
   @IsString()
+  netPrice?: string;
+
+  @IsOptional()
+  @IsString()
   image?: string;
 
   @IsOptional()
@@ -65,5 +68,7 @@ export class AddProductDto {
   @Type(() => StoneDetailsDto)
   stoneSpecs?: StoneDetailsDto[];
 
- 
+  @IsOptional()
+  @IsString()
+  uploadRefId?: string;
 }

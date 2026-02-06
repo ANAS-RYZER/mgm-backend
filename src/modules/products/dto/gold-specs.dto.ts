@@ -18,4 +18,7 @@ export class GoldSpecsDto {
 
   @IsString()
   metal: string; // ex: "Gold"
+
+  @IsString()
+  goldPrice: string; // ex: "10000"
 }
