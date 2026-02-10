@@ -8,6 +8,8 @@ import {
 } from './schema/appointment.schema';
 import { Slot, SlotSchema } from './schema/slot.schema';
 import { AuthModule } from '../auth/auth.module';
+import { AppoitmentDataController } from './appoitmnetData/appointment.data.controller';
+import {AppoitmenDatatService} from "./appoitmnetData/appointment.data.service"
 
 
 @Module({
@@ -18,7 +20,7 @@ import { AuthModule } from '../auth/auth.module';
     ]),
     AuthModule,
   ],
-  controllers: [AppoitmentController],
-  providers: [AppoitmentService],
+  controllers: [AppoitmentController ,AppoitmentDataController ],
+  providers: [AppoitmentService , AppoitmenDatatService],
 })
 export class AppoitmentModule {}
