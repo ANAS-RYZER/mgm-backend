@@ -13,4 +13,12 @@ export class AgentDashboardController {
     const customers = await this.agentDashboardService.getCustomersByAgentId(agentId);
     return customers;
   }
+
+  @Get('me')
+  @UseGuards(AgentJwtAuthGuard)
+  async getAgent(@Req() req: Request) {
+    const agentId = req['agent'].agentId;
+    const agent = await this.agentDashboardService.getAgent(agentId);
+    return agent;
+  }
 }
