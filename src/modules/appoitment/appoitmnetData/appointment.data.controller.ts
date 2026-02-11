@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Post, Query, Req, UseGuards, Param } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req, UseGuards, Param, Patch } from '@nestjs/common';
 import type { Request } from 'express';
 import { AppoitmenDatatService } from './appointment.data.service';
 import { AgentJwtAuthGuard } from 'src/modules/agents/guards/agent-jwt-auth.guard';
 import { AdminJwtAuthGuard } from 'src/modules/admins/guards/admin-jwt-auth.guard';
+import {AppointmentStatus} from '../dto/appoitment.dto';
 
 
 @Controller('dashboard')
@@ -31,5 +32,21 @@ export class AppoitmentDataController {
   async getAdminAppointmentById(@Param('id') id: string) {
       return this.service.getAppointmentsById(id);
     }
+
+  @Patch(':id/status')
+  @UseGuards(AdminJwtAuthGuard)
+  async updateStatus(
+    @Param('id') id: string,
+    @Body('status') status: AppointmentStatus,
+  ) {
+  const updatedAppointment =
+    await this.service.updateAppointmentStatus(id, status);
+
+  return {
+    success: true,
+    message: 'Appointment status updated successfully',
+    data: updatedAppointment,
+  };
+}
 
 }

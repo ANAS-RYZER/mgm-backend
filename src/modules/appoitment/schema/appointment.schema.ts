@@ -9,6 +9,14 @@ export enum SlotCode {
   NIGHT = 'NIGHT',
 }
 
+export enum AppointmentStatus {
+  CONFIRMED = 'CONFIRMED',
+  CANCELLED = 'CANCELLED',
+  ISPURCHASED = 'ISPURCHASED',
+  ISVISITED = 'ISVISITED',
+}
+
+
 @Schema({ timestamps: true })
 export class Appointment {
   @Prop({ required: true })
@@ -32,8 +40,13 @@ export class Appointment {
   @Prop({ type: [String], default: [] })
   productIds: string[];
 
-  @Prop({ default: 'CONFIRMED' })
-  status: 'CONFIRMED' | 'CANCELLED' | 'ISPURCHEDASED' | 'ISVISITED';
+  @Prop({
+  type: String,
+  enum: AppointmentStatus,
+  default: AppointmentStatus.CONFIRMED,
+  })
+  status: AppointmentStatus;
+
 
   @Prop()
   referralCode?: string;
