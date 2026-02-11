@@ -5,6 +5,9 @@ import {
   Appointment,
   AppointmentDocument,
 } from '../schema/appointment.schema';
+import { User, UserDocument } from 'src/modules/users/schemas/user.schema';
+import { AgentProfile , AgentProfileDocument} from 'src/modules/agents/schemas/agent.profile.schema';
+import { Product, ProductDocument } from 'src/modules/products/schemas/product.schema';
 
 @Injectable()
 export class AppoitmenDatatService {
@@ -12,6 +15,12 @@ export class AppoitmenDatatService {
   constructor(
     @InjectModel(Appointment.name)
     private readonly appointmentModel: Model<AppointmentDocument>,
+    @InjectModel(User.name)
+    private readonly UserModel: Model<UserDocument>,
+    @InjectModel(AgentProfile.name)
+    private readonly AgentProfileModel: Model<AgentProfileDocument>,
+    @InjectModel(Product.name)
+    private readonly ProductModel: Model<ProductDocument>,
   ) {}
 
   async getAdminAppointment() {
@@ -50,6 +59,36 @@ export class AppoitmenDatatService {
       .lean()
       .exec();
   }
+
+
+  async getAppointmentsById(appointmentid: string) {
+    const appointment = await this.appointmentModel.findById(appointmentid).lean().exec();
+    if (!appointment) {
+      throw new Error('Appointment not found');
+    }
+
+    const [user, agent, products] = await Promise.all([
+      this.UserModel.findById(appointment.userId).select('fullName email refId avatar').lean(),
+      appointment.agentid
+      ?this.AgentProfileModel.findOne({ referralCode: appointment.agentid }) 
+          .select('name email phone referralCode')
+          .lean()
+      : Promise.resolve(null),
+      this.ProductModel.find({
+        _id: { $in: appointment.productIds || [] },
+      }).select('name sku description mrpPrice goldSpecs stoneSpecs').lean(),
+    ]);
+
+    return {
+      ...appointment,
+      userDetails: user,
+      agentDetails: agent,
+      productDetails: products,
+    };
+
+  }
+
+
   
   
 

@@ -11,6 +11,10 @@ import { AuthModule } from '../auth/auth.module';
 import { AppoitmentDataController } from './appoitmnetData/appointment.data.controller';
 import {AppoitmenDatatService} from "./appoitmnetData/appointment.data.service"
 import { AgentModule } from '../agents/agent.module';
+import { UsersModule } from '../users/users.module';
+import { ProductsModule } from '../products/products.module';
+import {AdminAuthModule} from "../admins/admin-auth.module";
+
 
 
 @Module({
@@ -21,6 +25,9 @@ import { AgentModule } from '../agents/agent.module';
     ]),
     AuthModule,
     AgentModule,
+    UsersModule,
+    ProductsModule,
+    AdminAuthModule,
   ],
   controllers: [AppoitmentController ,AppoitmentDataController ],
   providers: [AppoitmentService , AppoitmenDatatService],

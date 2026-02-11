@@ -14,7 +14,6 @@ export class Appointment {
   @Prop({ required: true })
   userId: string;
 
-
   @Prop({ required: true })
   date: string; // YYYY-MM-DD
 
@@ -34,7 +33,7 @@ export class Appointment {
   productIds: string[];
 
   @Prop({ default: 'CONFIRMED' })
-  status: 'CONFIRMED' | 'CANCELLED';
+  status: 'CONFIRMED' | 'CANCELLED' | 'ISPURCHEDASED' | 'ISVISITED';
 
   @Prop()
   referralCode?: string;

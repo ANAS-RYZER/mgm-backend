@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req, UseGuards, Param } from '@nestjs/common';
 import type { Request } from 'express';
 import { AppoitmenDatatService } from './appointment.data.service';
 import { AgentJwtAuthGuard } from 'src/modules/agents/guards/agent-jwt-auth.guard';
+import { AdminJwtAuthGuard } from 'src/modules/admins/guards/admin-jwt-auth.guard';
 
 
 @Controller('dashboard')
@@ -24,5 +25,11 @@ export class AppoitmentDataController {
     console.log(data , "data")
     return { data };
   }
- 
+
+  @Get('admin/appointment/:id')
+  @UseGuards(AdminJwtAuthGuard)
+  async getAdminAppointmentById(@Param('id') id: string) {
+      return this.service.getAppointmentsById(id);
+    }
+
 }
