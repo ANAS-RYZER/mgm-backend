@@ -6,6 +6,7 @@ import {
   AppointmentSchema,
 } from '../schema/appointment.schema';
 import { AppoitmentDataController } from './appointment.data.controller';
+import { AgentModule } from '../../agents/agent.module';
 
 
 @Module({
@@ -13,6 +14,7 @@ import { AppoitmentDataController } from './appointment.data.controller';
     MongooseModule.forFeature([
       { name: Appointment.name, schema: AppointmentSchema },
     ]),
+    AgentModule
   ],
   controllers: [AppoitmentDataController],
   providers: [AppoitmenDatatService],

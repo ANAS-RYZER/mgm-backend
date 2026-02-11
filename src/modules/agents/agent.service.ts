@@ -104,6 +104,15 @@ export class AgentService {
     return agent;
   }
 
+  /** Get referral code from DB by agent profile id (JWT agentId is profile _id). */
+  async getReferralCodeByProfileId(profileId: string): Promise<string> {
+    const profile = await this.agentProfileModel
+      .findById(profileId)
+      .select("referralCode")
+      .lean();
+    return profile?.referralCode ?? "";
+  }
+
   // Admin approves or rejects agent
   async updateAgentStatus(
     agentId: string,
@@ -205,24 +214,36 @@ export class AgentService {
     refreshToken: string;
     sessionId: string;
     message: string;
-    user: { userId: string; email: string; name: string };
+    user: { userId: string; email: string; name: string , referralCode : string };
   }> {
-    const { email, phoneNumber, password } = agentLoginDto;
+    // const { email, phoneNumber, password } = agentLoginDto;
+    const { email, password } = agentLoginDto;
+
 
     // Validate that at least one identifier is provided
-    if (!email && !phoneNumber) {
+    // if (!email && !phoneNumber) {
+    //   throw new BadRequestException("Email or phone number is required");
+    // }
+    if (!email ) {
       throw new BadRequestException("Email or phone number is required");
     }
 
     // Build query to find agent by email OR phoneNumber
+    // const query: any = {};
+    // if (email && phoneNumber) {
+    //   query.$or = [{ email }, { phoneNumber }];
+    // } else if (email) {
+    //   query.email = email;
+    // } else if (phoneNumber) {
+    //   query.phoneNumber = phoneNumber;
+    // }
+
     const query: any = {};
-    if (email && phoneNumber) {
-      query.$or = [{ email }, { phoneNumber }];
+    if (email ) {
+      query.$or = [{ email }];
     } else if (email) {
       query.email = email;
-    } else if (phoneNumber) {
-      query.phoneNumber = phoneNumber;
-    }
+    } 
 
     // Find agent with password field
     const agent = await this.agentModel.findOne(query).select("-password");
@@ -263,6 +284,7 @@ export class AgentService {
       agentId: agentProfile._id.toString(),
       email: agentProfile.email,
       sessionId,
+      referralCode: agentProfile.referralCode ?? '',
     };
 
     const accessToken = this.agentJwtService.generateAccessToken(tokenPayload);
@@ -284,7 +306,8 @@ export class AgentService {
       user: {
         userId: agentProfile._id.toString(),
         email: agentProfile.email,
-        name: agentProfile.name,
+        name: agentProfile.name ?? '',
+        referralCode: agentProfile.referralCode ?? '',
       },
       accessToken,
       refreshToken,

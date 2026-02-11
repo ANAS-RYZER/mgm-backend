@@ -73,7 +73,7 @@ export class AppoitmentService {
   
       const slotTime = SLOT_TIME_MAP[dto.slotCode];
   
-      // 2️⃣ Create appointment
+      // 2️⃣ Create appointment (store referralCode for agent filtering)
       const appointment = await this.appointmentModel.create(
         [
           {
@@ -85,6 +85,7 @@ export class AppoitmentService {
             visitType: 'STORE',
             productIds: dto.productIds || [],
             status: 'CONFIRMED',
+            ...(dto.referralCode && { referralCode: dto.referralCode }),
           },
         ],
         { session },
