@@ -204,6 +204,7 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
     }
+    console.log(user , "user ")
 
     // Check if user has a password (social login users might not have one)
     if (!user.password) {

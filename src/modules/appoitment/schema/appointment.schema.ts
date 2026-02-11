@@ -14,6 +14,7 @@ export class Appointment {
   @Prop({ required: true })
   userId: string;
 
+
   @Prop({ required: true })
   date: string; // YYYY-MM-DD
 
@@ -40,6 +41,10 @@ export class Appointment {
 
   @Prop()
   agentId?: string;
+
+  // Backwards-compat: some existing documents use `agentid`
+  @Prop()
+  agentid?: string;
 }
 
 export const AppointmentSchema =

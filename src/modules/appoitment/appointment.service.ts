@@ -86,10 +86,13 @@ export class AppoitmentService {
             productIds: dto.productIds || [],
             status: 'CONFIRMED',
             ...(dto.referralCode && { referralCode: dto.referralCode }),
+            // Backwards-compat with older DB field naming
+            ...(dto.referralCode && { agentid: dto.referralCode }),
           },
         ],
         { session },
       );
+      console.log(appointment , "appointment")
   
       await session.commitTransaction();
       session.endSession();

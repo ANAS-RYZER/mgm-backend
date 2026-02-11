@@ -28,9 +28,25 @@ export class AppoitmenDatatService {
   }
 
   async getAgentAppointments(agentId: string, referralCode: string) {
-    const filter: Record<string, string> = {};
-    if (agentId) filter.agentId = agentId;
-    if (referralCode) filter.referralCode = referralCode;
+    // Appointments may store the agent reference under different fields.
+    // Prefer referralCode (coming from auth guard -> DB) to find the agent's appointments.
+    const or: Record<string, string>[] = [];
+
+    if (referralCode) {
+      or.push(
+        { referralCode },
+        { agentId: referralCode },
+        // backwards-compat with older DB field naming
+        { agentid: referralCode },
+      );
+    }
+
+    // Fallback: if caller only has agentId, try matching legacy fields too
+    if (!referralCode && agentId) {
+      or.push({ agentId }, { agentid: agentId });
+    }
+
+    const filter = or.length ? { $or: or } : {};
 
     return this.appointmentModel
       .find(filter)
@@ -38,4 +54,7 @@ export class AppoitmenDatatService {
       .lean()
       .exec();
   }
+  
+  
+
 }

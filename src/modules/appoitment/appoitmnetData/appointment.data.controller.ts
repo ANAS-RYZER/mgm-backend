@@ -26,12 +26,10 @@ export class AppoitmentDataController {
   @Get("agent")
   @UseGuards(AgentJwtAuthGuard)
   async getagentsAppointment(@Req() req: Request) {
-    const agentId = (req as any).agent?.agentId ?? "";
-    const agentReferralCode = (req as any).agentReferralCode ?? "";
-    const data = await this.service.getAgentAppointments(
-      agentId,
-      agentReferralCode,
-    );
+    const agentId = (req as any).agent?.agentId ?? '';
+    const agentReferralCode = (req as any).agentReferralCode ?? '';
+    const data = await this.service.getAgentAppointments(agentId, agentReferralCode);
+    console.log(data , "data")
     return { data };
   }
 }
