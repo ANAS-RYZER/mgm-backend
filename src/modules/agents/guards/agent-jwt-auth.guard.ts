@@ -6,10 +6,14 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { AgentJwtService } from '../services/agent-jwt.service';
+import { AgentService } from '../agent.service';
 
 @Injectable()
 export class AgentJwtAuthGuard implements CanActivate {
-  constructor(private readonly agentJwtService: AgentJwtService) {}
+  constructor(
+    private readonly agentJwtService: AgentJwtService,
+    private readonly agentService: AgentService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
@@ -22,8 +26,10 @@ export class AgentJwtAuthGuard implements CanActivate {
     try {
       const payload = this.agentJwtService.verifyAccessToken(token);
 
-      // Attach agent payload to request object
+      // Attach agent payload; load referral code from DB so it's always current
       request['agent'] = payload;
+      request['agentReferralCode'] =
+        await this.agentService.getReferralCodeByProfileId(payload.agentId);
       return true;
     } catch (error) {
       throw new UnauthorizedException('Invalid or expired access token');

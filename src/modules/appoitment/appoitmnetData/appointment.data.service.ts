@@ -23,6 +23,17 @@ export class AppoitmenDatatService {
       .exec();
   }
 
+  async getAgentAppointments(agentId: string, referralCode: string) {
+    const filter: Record<string, string> = {};
+    if (agentId) filter.agentId = agentId;
+    if (referralCode) filter.referralCode = referralCode;
+
+    return this.appointmentModel
+      .find(filter)
+      .sort({ date: 1, slotStartTime: 1 })
+      .lean()
+      .exec();
+  }
  
   
 

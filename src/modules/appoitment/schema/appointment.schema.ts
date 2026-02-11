@@ -34,6 +34,12 @@ export class Appointment {
 
   @Prop({ default: 'CONFIRMED' })
   status: 'CONFIRMED' | 'CANCELLED';
+
+  @Prop()
+  referralCode?: string;
+
+  @Prop()
+  agentId?: string;
 }
 
 export const AppointmentSchema =

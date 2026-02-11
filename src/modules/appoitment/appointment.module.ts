@@ -10,6 +10,7 @@ import { Slot, SlotSchema } from './schema/slot.schema';
 import { AuthModule } from '../auth/auth.module';
 import { AppoitmentDataController } from './appoitmnetData/appointment.data.controller';
 import {AppoitmenDatatService} from "./appoitmnetData/appointment.data.service"
+import { AgentModule } from '../agents/agent.module';
 
 
 @Module({
@@ -19,6 +20,7 @@ import {AppoitmenDatatService} from "./appoitmnetData/appointment.data.service"
       { name: Slot.name, schema: SlotSchema },
     ]),
     AuthModule,
+    AgentModule,
   ],
   controllers: [AppoitmentController ,AppoitmentDataController ],
   providers: [AppoitmentService , AppoitmenDatatService],

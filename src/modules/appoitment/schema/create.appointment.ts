@@ -15,6 +15,12 @@ export class CreateAppointmentDto {
 
   @IsString()
   userId: string;
+  
+
+  @IsString()
+  referralCode : string
+
+
 
   @IsOptional()
   @IsArray()

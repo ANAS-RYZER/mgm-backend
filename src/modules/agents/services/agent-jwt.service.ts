@@ -8,6 +8,7 @@ export interface AgentTokenPayload {
   agentId: string;
   email: string;
   sessionId?: string;
+  referralCode?: string;
 }
 
 @Injectable()
