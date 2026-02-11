@@ -27,3 +27,10 @@ export class CreateAppointmentDto {
 
 
 }
+
+export enum AppointmentStatus {
+  CONFIRMED = 'CONFIRMED',
+  CANCELLED = 'CANCELLED',
+  ISPURCHASED = 'ISPURCHASED',
+  ISVISITED = 'ISVISITED',
+}

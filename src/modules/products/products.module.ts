@@ -19,5 +19,6 @@ import { ProductsUserModule } from "./productuser/productuser.module";
 
   controllers: [ProductsController],
   providers: [ProductsService],
+  exports: [MongooseModule], 
 })
 export class ProductsModule {}

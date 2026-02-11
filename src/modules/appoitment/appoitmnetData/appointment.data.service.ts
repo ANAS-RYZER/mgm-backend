@@ -1,13 +1,26 @@
-import { Injectable } from "@nestjs/common";
-import { InjectModel } from "@nestjs/mongoose";
-import { Model, PipelineStage } from "mongoose";
-import { Appointment, AppointmentDocument } from "../schema/appointment.schema";
+import { Injectable , BadRequestException, NotFoundException, ConflictException} from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, PipelineStage, isValidObjectId } from 'mongoose';
+import {
+  Appointment,
+  AppointmentDocument,
+} from '../schema/appointment.schema';
+import { User, UserDocument } from 'src/modules/users/schemas/user.schema';
+import { AgentProfile , AgentProfileDocument} from 'src/modules/agents/schemas/agent.profile.schema';
+import { Product, ProductDocument } from 'src/modules/products/schemas/product.schema';
+import { AppointmentStatus } from '../dto/appoitment.dto';
 
 @Injectable()
 export class AppoitmenDatatService {
   constructor(
     @InjectModel(Appointment.name)
     private readonly appointmentModel: Model<AppointmentDocument>,
+    @InjectModel(User.name)
+    private readonly UserModel: Model<UserDocument>,
+    @InjectModel(AgentProfile.name)
+    private readonly AgentProfileModel: Model<AgentProfileDocument>,
+    @InjectModel(Product.name)
+    private readonly ProductModel: Model<ProductDocument>,
   ) {}
  async getAdminAppointment(search?: string) {
 
@@ -154,4 +167,84 @@ export class AppoitmenDatatService {
       .lean()
       .exec();
   }
+
+
+  async getAppointmentsById(appointmentid: string) {
+    const appointment = await this.appointmentModel.findById(appointmentid).lean().exec();
+    if (!appointment) {
+      throw new Error('Appointment not found');
+    }
+
+    const [user, agent, products] = await Promise.all([
+      this.UserModel.findById(appointment.userId).select('fullName email refId avatar').lean(),
+      appointment.agentid
+      ?this.AgentProfileModel.findOne({ referralCode: appointment.agentid }) 
+          .select('name email phone referralCode')
+          .lean()
+      : Promise.resolve(null),
+      this.ProductModel.find({
+        _id: { $in: appointment.productIds || [] },
+      }).select('name sku mrpPrice goldSpecs stoneSpecs').lean(),
+    ]);
+
+    return {
+      ...appointment,
+      userDetails: user,
+      agentDetails: agent,
+      productDetails: products,
+    };
+
+  }
+
+  async updateAppointmentStatus(
+    appointmentId: string,
+    status: AppointmentStatus,
+  ) {
+    // Validate Mongo ID
+    if (!isValidObjectId(appointmentId)) {
+      throw new BadRequestException('Invalid appointment ID');
+    }
+
+    // Validate Status Enum
+    if (!Object.values(AppointmentStatus).includes(status)) {
+      throw new BadRequestException('Invalid status value');
+    }
+
+    // Find Appointment
+    const appointment = await this.appointmentModel.findById(appointmentId);
+
+    if (!appointment) {
+      throw new NotFoundException('Appointment not found');
+    }
+
+    //  Prevent updating if already cancelled
+    if (appointment.status === AppointmentStatus.CANCELLED) {
+      throw new ConflictException(
+        'Cannot update a cancelled appointment',
+      );
+    }
+
+    // Prevent same status update
+    if (appointment.status === status) {
+      throw new ConflictException(
+        `Appointment is already ${status}`,
+      );
+    }
+
+    // Optional: Prevent updating past appointments
+    const today = new Date().toISOString().split('T')[0];
+    if (appointment.date < today) {
+      throw new ConflictException(
+        'Cannot update status of past appointment',
+      );
+    }
+    
+    //  Update
+    appointment.status = status;
+    await appointment.save();
+
+    return appointment;
+  }
+
+
 }
