@@ -72,6 +72,7 @@ export class AppoitmentService {
       }
   
       const slotTime = SLOT_TIME_MAP[dto.slotCode];
+      console.log(dto , "slot time")
   
       // 2️⃣ Create appointment (store referralCode for agent filtering)
       const appointment = await this.appointmentModel.create(

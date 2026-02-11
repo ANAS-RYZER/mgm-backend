@@ -47,5 +47,6 @@ export class Appointment {
   agentid?: string;
 }
 
+
 export const AppointmentSchema =
   SchemaFactory.createForClass(Appointment);
