@@ -27,4 +27,11 @@ export class AgentDashboardService {
       customers: customers,
     };
   }
+  async getAgent(agentId: string) {
+    const agent = await this.agentProfileModel.findOne({ _id: agentId }).select('agentId name email phoneNumber dob ');
+    if (!agent) {
+      throw new NotFoundException('Agent not found');
+    }
+    return agent;
+  }
 }
