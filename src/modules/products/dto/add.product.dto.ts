@@ -33,7 +33,27 @@ export class AddProductDto {
 
   @IsOptional()
   @IsNumber()
-  discountedPrice?: number;
+  discountedPercentage?: number;
+
+  @IsOptional()
+  @IsNumber()
+  netprice?: number;
+
+  @IsOptional()
+  @IsNumber()
+  cgst?: number;
+
+  @IsOptional()
+  @IsNumber()
+  sgst?: number;
+
+  @IsOptional()
+  @IsNumber()
+  va?: number;
+
+  @IsOptional()
+  @IsNumber()
+  makingChanges?: number;
 
   @IsOptional()
   @IsArray()
