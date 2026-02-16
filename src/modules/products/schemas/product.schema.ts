@@ -30,6 +30,9 @@ export class StoneDetails {
   @Prop({ required: true })
   quantity: number;
 
+  @Prop({required: false})
+  stoneprice?: number
+
   @Prop({ enum: GemCut, required: true })
   cut: GemCut;
 
@@ -52,8 +55,6 @@ export class GoldSpecs {
 
   @Prop({ required: true })
   grossWeight: number;
-
-  
 
   @Prop({ required: true })
   makingCharges: number;
@@ -82,6 +83,18 @@ export class Product  {
 
   @Prop({ type: Number, default: 0 })
   discountedPercentage?: number;
+
+  @Prop({type:Number, default:0})
+  discountedPrice?:number;
+
+  @Prop({type: Number, default:0})
+  goldPrice?:number;
+
+  @Prop({type: Number, default:0})
+  multiplestonePrice?:number;
+
+  @Prop({type:Number, default:0})
+  grossPrice?:number;
 
   @Prop({ type: Number, default: 0})
   netprice?: number;

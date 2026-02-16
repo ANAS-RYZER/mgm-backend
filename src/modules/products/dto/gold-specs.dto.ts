@@ -10,15 +10,10 @@ export class GoldSpecsDto {
   @IsNumber()
   grossWeight: number;
 
-  @IsString()
-  purity: string; // ex: "91.6%"
-
   @IsNumber()
   makingCharges: number;
 
   @IsString()
   metal: string; // ex: "Gold"
 
-  @IsString()
-  goldPrice: string; // ex: "10000"
 }
