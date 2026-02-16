@@ -1,17 +1,13 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { InjectConnection, InjectModel } from '@nestjs/mongoose';
-import { Connection, Model } from 'mongoose';
-import { CreateAppointmentDto } from './dto/appoitment.dto';
-import {
-  Appointment,
-  AppointmentDocument,
-} from './schema/appointment.schema';
-import { Slot, SlotDocument } from './schema/slot.schema';
-import { SLOT_TIME_MAP } from './constant/time.slot';
+import { Injectable, BadRequestException } from "@nestjs/common";
+import { InjectConnection, InjectModel } from "@nestjs/mongoose";
+import { Connection, Model } from "mongoose";
+import { CreateAppointmentDto } from "./dto/appoitment.dto";
+import { Appointment, AppointmentDocument } from "./schema/appointment.schema";
+import { Slot, SlotDocument } from "./schema/slot.schema";
+import { SLOT_TIME_MAP } from "./constant/time.slot";
 
 @Injectable()
 export class AppoitmentService {
-
   constructor(
     @InjectConnection() private readonly connection: Connection,
     @InjectModel(Appointment.name)
@@ -22,39 +18,63 @@ export class AppoitmentService {
 
   async getSlots(date: string) {
     const baseSlots = [
-      { code: 'MORNING', time: '10:00 - 13:00' },
-      { code: 'EVENING', time: '14:00 - 17:00' },
-      { code: 'NIGHT', time: '17:30 - 20:30' },
+      { code: "MORNING", time: "10:00 - 13:00" },
+      { code: "EVENING", time: "14:00 - 17:00" },
+      { code: "NIGHT", time: "17:30 - 20:30" },
     ];
-  
+    const MAX_BOOKINGS = 20;
+
     // 1️⃣ Fetch slot docs for the date
     const slotDocs = await this.slotModel.find({ date }).lean();
-  
+
     // 2️⃣ Convert DB data to map
     const slotMap = new Map(
-      slotDocs.map(slot => [slot.slotCode, slot.bookedCount]),
+      slotDocs.map((slot) => [slot.slotCode, slot.bookedCount]),
     );
-  
+
+    const now = new Date();
+
+    const selectedDate = new Date(date);
+    const isToday = now.toDateString() === selectedDate.toDateString();
+
+    const getSlotEndDateTime = (timeRange: string) => {
+      const [, end] = timeRange.split(" - "); // 13:00
+
+      const [hours, minutes] = end.split(":").map(Number);
+
+      const slotEnd = new Date(selectedDate);
+      slotEnd.setHours(hours, minutes, 0, 0);
+
+      return slotEnd;
+    };
+
     // 3️⃣ Merge DB + base slots
-    return baseSlots.map(slot => {
+    return baseSlots.map((slot) => {
       const bookedCount = slotMap.get(slot.code) || 0;
-  
+      let isAvailable = bookedCount < MAX_BOOKINGS;
+      if (isToday) {
+        const slotEndTime = getSlotEndDateTime(slot.time);
+
+        if (now > slotEndTime) {
+          isAvailable = false;
+        }
+      }
+
       return {
         slotCode: slot.code,
         time: slot.time,
         maxBookings: 20,
         bookedCount,
         availableCount: 20 - bookedCount,
-        isAvailable: bookedCount < 20,
+        isAvailable: isAvailable,
       };
     });
   }
-  
 
-  async createAppointment(dto: CreateAppointmentDto , userId) {
+  async createAppointment(dto: CreateAppointmentDto, userId) {
     const session = await this.connection.startSession();
     session.startTransaction();
-  
+
     try {
       // 1️⃣ Increment slot only if space available
       const slot = await this.slotModel.findOneAndUpdate(
@@ -66,14 +86,15 @@ export class AppoitmentService {
         { $inc: { bookedCount: 1 } },
         { new: true, upsert: true, session },
       );
-  
+
       if (!slot) {
-        throw new Error('Slot is fully booked');
+        throw new Error("Slot is fully booked");
       }
-  
+
       const slotTime = SLOT_TIME_MAP[dto.slotCode];
-  
-      // 2️⃣ Create appointment
+      console.log(dto, "slot time");
+
+      // 2️⃣ Create appointment (store referralCode for agent filtering)
       const appointment = await this.appointmentModel.create(
         [
           {
@@ -82,22 +103,26 @@ export class AppoitmentService {
             slotCode: dto.slotCode,
             slotStartTime: slotTime.start,
             slotEndTime: slotTime.end,
-            visitType: 'STORE',
+            visitType: "STORE",
             productIds: dto.productIds || [],
-            status: 'CONFIRMED',
+            status: "CONFIRMED",
+            ...(dto.referralCode && { referralCode: dto.referralCode }),
+            // Backwards-compat with older DB field naming
+            ...(dto.referralCode && { agentid: dto.referralCode }),
           },
         ],
         { session },
       );
-  
+      console.log(appointment, "appointment");
+
       await session.commitTransaction();
       session.endSession();
-  
+
       // 3️⃣ Notify admin
       this.notifyAdmin(appointment[0]);
-  
+
       return {
-        message: 'Appointment booked successfully',
+        message: "Appointment booked successfully",
         appointmentId: appointment[0]._id,
       };
     } catch (error) {
@@ -106,10 +131,8 @@ export class AppoitmentService {
       throw error;
     }
   }
-  
 
   notifyAdmin(appointment: any) {
-    console.log('🔔 New Store Appointment', appointment);
-    
+    console.log("🔔 New Store Appointment", appointment);
   }
 }

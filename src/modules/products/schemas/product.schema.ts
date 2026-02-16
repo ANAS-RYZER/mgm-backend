@@ -80,8 +80,23 @@ export class Product  {
   @Prop({ required: true })
   mrpPrice: number;
 
-  @Prop()
-  discountedPrice?: number;
+  @Prop({ type: Number, default: 0 })
+  discountedPercentage?: number;
+
+  @Prop({ type: Number, default: 0})
+  netprice?: number;
+
+  @Prop({ type: Number, default: 0})
+  cgst?: number;
+
+  @Prop({type: Number, default:0})
+  sgst?:number;
+
+  @Prop({ type: Number, default: 0 })
+  va?: number;  
+  
+  @Prop({ type: Number, default: 0 })
+  makingChanges?: number;
 
   @Prop()
   image: string;

@@ -86,7 +86,8 @@ export class AgentService {
     return this.agentModel
       .find(filter)
       .select("-password -bankDetails -governmentId -createdAt -updatedAt ")
-      .lean();
+      .lean()
+      .sort({ createdAt: -1 });
   }
   async getAllAgents(): Promise<AgentProfile[]> {
     return this.agentProfileModel
@@ -104,12 +105,25 @@ export class AgentService {
     return agent;
   }
 
+  /** Get referral code from DB by agent profile id (JWT agentId is profile _id). */
+  async getReferralCodeByProfileId(profileId: string): Promise<string> {
+    const profile = await this.agentProfileModel
+      .findById(profileId)
+      .select("referralCode")
+      .lean();
+    return profile?.referralCode ?? "";
+  }
+
   // Admin approves or rejects agent
   async updateAgentStatus(
     agentId: string,
     approveAgentDto: ApproveAgentDto,
-   
-  ): Promise<{ agent: Agent; password?: string; referralCode: string; agentId: string }> {
+  ): Promise<{
+    agent: Agent;
+    password?: string;
+    referralCode: string;
+    agentId: string;
+  }> {
     const agent = await this.agentModel.findById(agentId);
 
     if (!agent) {
@@ -170,7 +184,7 @@ export class AgentService {
 
       return {
         agent: agentObject,
-        password: generatedPassword, 
+        password: generatedPassword,
         referralCode: agentProfile?.referralCode || "",
         agentId: agentProfile.agentId,
         // Return plain password for admin to share
@@ -205,23 +219,34 @@ export class AgentService {
     refreshToken: string;
     sessionId: string;
     message: string;
-    user: { userId: string; email: string; name: string };
+    user: { userId: string; email: string; name: string; referralCode: string };
   }> {
-    const { email, phoneNumber, password } = agentLoginDto;
+    // const { email, phoneNumber, password } = agentLoginDto;
+    const { email, password } = agentLoginDto;
 
     // Validate that at least one identifier is provided
-    if (!email && !phoneNumber) {
+    // if (!email && !phoneNumber) {
+    //   throw new BadRequestException("Email or phone number is required");
+    // }
+    if (!email) {
       throw new BadRequestException("Email or phone number is required");
     }
 
     // Build query to find agent by email OR phoneNumber
+    // const query: any = {};
+    // if (email && phoneNumber) {
+    //   query.$or = [{ email }, { phoneNumber }];
+    // } else if (email) {
+    //   query.email = email;
+    // } else if (phoneNumber) {
+    //   query.phoneNumber = phoneNumber;
+    // }
+
     const query: any = {};
-    if (email && phoneNumber) {
-      query.$or = [{ email }, { phoneNumber }];
+    if (email) {
+      query.$or = [{ email }];
     } else if (email) {
       query.email = email;
-    } else if (phoneNumber) {
-      query.phoneNumber = phoneNumber;
     }
 
     // Find agent with password field
@@ -263,6 +288,7 @@ export class AgentService {
       agentId: agentProfile._id.toString(),
       email: agentProfile.email,
       sessionId,
+      referralCode: agentProfile.referralCode ?? "",
     };
 
     const accessToken = this.agentJwtService.generateAccessToken(tokenPayload);
@@ -284,7 +310,8 @@ export class AgentService {
       user: {
         userId: agentProfile._id.toString(),
         email: agentProfile.email,
-        name: agentProfile.name,
+        name: agentProfile.name ?? "",
+        referralCode: agentProfile.referralCode ?? "",
       },
       accessToken,
       refreshToken,
@@ -564,7 +591,6 @@ export class AgentService {
     const numbers = String(seq).padStart(5, "0");
     return `${letters}${numbers}`;
   }
-
 
   async getAgentByApplicationId(applicationId: string): Promise<Agent> {
     const agent = await this.agentModel.findOne({ applicationId });

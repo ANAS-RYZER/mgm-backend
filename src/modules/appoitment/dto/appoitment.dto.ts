@@ -14,10 +14,23 @@ export class CreateAppointmentDto {
   @IsEnum(SlotCode)
   slotCode: SlotCode;
 
+  @IsString()
+  referralCode : string
+
+
 
 
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   productIds?: string[];
+
+
+}
+
+export enum AppointmentStatus {
+  CONFIRMED = 'CONFIRMED',
+  CANCELLED = 'CANCELLED',
+  ISPURCHASED = 'ISPURCHASED',
+  ISVISITED = 'ISVISITED',
 }

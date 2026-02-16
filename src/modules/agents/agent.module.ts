@@ -65,6 +65,6 @@ import { User, UserSchema } from "../users/schemas/user.schema";
     AgentJwtAuthGuard,
     AgentDashboardService,
   ],
-  exports: [AgentService, AgentJwtAuthGuard, AgentJwtService],
+  exports: [AgentService, AgentJwtAuthGuard, AgentJwtService, MongooseModule],
 })
 export class AgentModule {}

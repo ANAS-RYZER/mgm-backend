@@ -204,6 +204,7 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
     }
+    console.log(user , "user ")
 
     // Check if user has a password (social login users might not have one)
     if (!user.password) {
@@ -350,9 +351,10 @@ export class AuthService {
     email: string;
     avatar: string;
     userId: string;
+    refferalCode : string
   }> {
-    const user = await this.userModel.findById(userId).select('fullName email avatar').lean();
-    
+    const user = await this.userModel.findById(userId).select('fullName email avatar refId').lean();
+    console.log(user, "user")
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -362,6 +364,7 @@ export class AuthService {
       email: user.email,
       avatar: user.avatar,
       userId: user._id.toString() ,
+      refferalCode  : user.refId
     };
   }
 
