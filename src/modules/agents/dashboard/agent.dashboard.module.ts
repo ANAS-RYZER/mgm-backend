@@ -1,3 +1,4 @@
+import { Product, ProductSchema } from './../../products/schemas/product.schema';
 
 import { Module } from '@nestjs/common';
 import { AgentModule } from '../agent.module';
@@ -5,16 +6,20 @@ import { AgentDashboardController } from './agent.dashboard.controller';
 
 import { AgentDashboardService } from './agent.dashboard.service';
 
-import { Agent } from '../schemas/agent.schema';
+import { AgentProfile, AgentProfileSchema } from '../schemas/agent.profile.schema';
 import { MongooseModule } from '@nestjs/mongoose';
-import { AgentSchema } from '../schemas/agent.schema';
-import { User, UserSchema } from 'src/modules/users/schemas/user.schema';
+import { User, UserSchema } from '../../users/schemas/user.schema';
+import { Order , OrderSchema} from '../../order/schema/order.schema';
+
 
 @Module({
   imports: [
-    AgentModule,
-    MongooseModule.forFeature([{ name: Agent.name, schema: AgentSchema }]),
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    MongooseModule.forFeature([
+      { name: AgentProfile.name, schema: AgentProfileSchema },
+      { name: User.name, schema: UserSchema },
+      { name: Product.name, schema: ProductSchema },
+      { name: Order.name, schema: OrderSchema },
+    ]),
   ],
   controllers: [AgentDashboardController],
   providers: [AgentDashboardService],
