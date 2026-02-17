@@ -53,8 +53,7 @@ export class GoldSpecs {
   @Prop({ required: true })
   goldWeight: number;
 
-  @Prop({ required: true })
-  grossWeight: number;
+
 
   @Prop({ required: true })
   makingCharges: number;

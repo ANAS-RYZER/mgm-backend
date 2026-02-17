@@ -4,11 +4,10 @@ export class GoldSpecsDto {
   @IsString()
   karat: string; // ex: "22K"
 
-  @IsNumber()
-  goldWeight: number;
+
 
   @IsNumber()
-  grossWeight: number;
+  goldWeight: number;
 
   @IsNumber()
   makingCharges: number;

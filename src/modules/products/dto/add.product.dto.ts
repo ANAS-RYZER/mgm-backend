@@ -54,9 +54,10 @@ export class AddProductDto {
   grossPrice?: number;
 
 
-  @IsOptional()
+   @IsOptional()
   @IsNumber()
-  netprice?: number;
+  netWeight?: number;
+
 
   @IsOptional()
   @IsNumber()
