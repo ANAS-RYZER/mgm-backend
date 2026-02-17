@@ -18,6 +18,8 @@ import { AdminJwtTokenService } from "./admin-jwt.service";
 import { AdminTokenStorageService } from "./admin-token-storage.service";
 import { AdminOtpService } from "./admin-otp.service";
 import { EmailService } from "../../../infra/email/email.service";
+import { randomBytes } from 'crypto';
+
 
 const ADMIN_ACCOUNTS = [
   {
@@ -257,36 +259,65 @@ export class AdminAuthService {
   //   };
   // }
 
-  async refreshAccessToken(refreshTokenDto: AdminRefreshTokenDto): Promise<{
-    accessToken: string;
-  }> {
-    const { sessionId } = refreshTokenDto;
+  async refreshAccessToken(
+    refreshTokenDto: AdminRefreshTokenDto,
+  ): Promise<{ accessToken: string; refreshToken: string; sessionId: string }> {
 
-    // Get session data from Redis
+    const { sessionId, refreshToken } = refreshTokenDto;
+
+    // Get session from Redis
     const sessionData =
       await this.adminTokenStorageService.getSessionData(sessionId);
 
     if (!sessionData) {
-      throw new UnauthorizedException("Session not found. Please login again");
+      throw new UnauthorizedException('Session expired. Please login again');
     }
 
-    // Verify admin still exists
-    const admin = await this.adminModel.findById(sessionData.adminId);
-    if (!admin) {
-      throw new NotFoundException("Admin not found");
+    // Validate refresh token
+    if (sessionData.refreshToken !== refreshToken) {
+      throw new UnauthorizedException('Invalid refresh token');
     }
 
-    // Generate new access token
-    const accessToken = this.adminJwtTokenService.generateAccessToken({
-      adminId: sessionData.adminId,
-      sessionId,
-      role: "admin",
+    // Find admin by EMAIL (since Redis stores email)
+    const admin = await this.adminModel.findOne({
+      email: sessionData.adminId,
     });
 
-    // Refresh the session expiry in Redis
-    await this.adminTokenStorageService.refreshSessionExpiry(sessionId);
+    if (!admin) {
+      throw new UnauthorizedException('Admin not found');
+    }
 
-    return { accessToken };
+    // Rotate session
+    await this.adminTokenStorageService.deleteSession(sessionId);
+
+    const newSessionId = randomBytes(32).toString('hex');
+
+    // Always use EMAIL in payload
+    const payload = {
+      adminId: admin.email,
+      sessionId: newSessionId,
+      role: 'admin',
+    };
+
+    // Generate tokens
+    const newRefreshToken =
+      this.adminJwtTokenService.generateRefreshToken(payload);
+
+    const accessToken =
+      this.adminJwtTokenService.generateAccessToken(payload);
+
+    // Store email in Redis
+    await this.adminTokenStorageService.storeTokens(
+      newSessionId,
+      admin.email,
+      newRefreshToken,
+    );
+
+    return {
+      accessToken,
+      refreshToken: newRefreshToken,
+      sessionId: newSessionId,
+    };
   }
 
   async logout(sessionId: string): Promise<{ message: string }> {

@@ -32,7 +32,7 @@ export class StoneDetailsDto {
 
   @IsOptional()
   @IsNumber()
-  price?: number;
+  stoneprice?: number;
   
   @IsOptional()
   @IsString()

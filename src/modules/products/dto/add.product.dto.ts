@@ -37,6 +37,25 @@ export class AddProductDto {
 
   @IsOptional()
   @IsNumber()
+  discountedPrice?: number;
+
+
+  @IsOptional()
+  @IsNumber()
+  goldPrice?: number;
+
+
+  @IsOptional()
+  @IsNumber()
+  multiplestonePrice?: number;
+
+  @IsOptional()
+  @IsNumber()
+  grossPrice?: number;
+
+
+  @IsOptional()
+  @IsNumber()
   netprice?: number;
 
   @IsOptional()

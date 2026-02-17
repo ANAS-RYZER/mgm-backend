@@ -50,4 +50,23 @@ export class AppoitmentDataController {
   };
 }
 
+@Get("agent/userdetails/:appointmentId")
+@UseGuards(AgentJwtAuthGuard)
+async getSingleAgentAppointment(
+  @Param("appointmentId") appointmentId: string,
+  @Req() req: Request,
+) {
+  const agentId = (req as any).agent?.agentId ?? "";
+  const agentReferralCode = (req as any).agentReferralCode ?? "";
+
+  const data = await this.service.getSingleAgentAppointment(
+    appointmentId,
+    agentId,
+    agentReferralCode,
+  );
+
+  return { data };
+}
+
+
 }

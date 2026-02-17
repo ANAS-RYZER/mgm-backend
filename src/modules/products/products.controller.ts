@@ -65,6 +65,13 @@ export class ProductsController {
     };
   }
 
+  @Get("/sku/:sku")
+  @HttpCode(HttpStatus.OK)
+  async getProductBySku(@Param("sku") sku: string) {
+    return this.productsService.getProductBySku(sku);
+  }
+
+
 
   @Get("/:id")
   @HttpCode(HttpStatus.OK)
@@ -82,7 +89,4 @@ export class ProductsController {
   ) {
     return this.productsService.updateProduct(productId, updateProductDto);
   }
-
-
-
 }
