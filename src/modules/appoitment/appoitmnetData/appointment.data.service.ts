@@ -30,14 +30,19 @@ export class AppoitmenDatatService {
     @InjectModel(Product.name)
     private readonly ProductModel: Model<ProductDocument>,
   ) {}
-  async getAdminAppointment(search?: string) {
+  async getAdminAppointment(
+    search?: string,
+    page = 1,
+    limit = 10,
+  ) {
+    const skip = (page - 1) * limit;
+
     const adminAppointmentPipeline: PipelineStage[] = [
       {
         $addFields: {
           userObjectId: { $toObjectId: "$userId" },
         },
       },
-
       {
         $lookup: {
           from: "users",
@@ -46,7 +51,6 @@ export class AppoitmenDatatService {
           as: "user",
         },
       },
-
       { $unwind: "$user" },
 
       {
@@ -71,7 +75,6 @@ export class AppoitmenDatatService {
           as: "partner",
         },
       },
-
       {
         $unwind: {
           path: "$partner",
@@ -79,7 +82,6 @@ export class AppoitmenDatatService {
         },
       },
 
-      // 🔥 GLOBAL SEARCH STAGE
       ...(search
         ? [
             {
@@ -110,10 +112,16 @@ export class AppoitmenDatatService {
 
       {
         $facet: {
-          appointments: [{ $match: {} }],
+          // PAGINATED DATA
+          appointments: [
+            { $skip: skip },
+            { $limit: limit },
+          ],
 
+          // TOTAL COUNT
           totalAppointments: [{ $count: "count" }],
 
+          // TODAY COUNT
           todayAppointments: [
             {
               $match: {
@@ -138,11 +146,16 @@ export class AppoitmenDatatService {
       },
     ];
 
-    const result = await this.appointmentModel
-      .aggregate(adminAppointmentPipeline)
-      .exec();
+    const result = await this.appointmentModel.aggregate(adminAppointmentPipeline);
 
-    return result[0];
+    return {
+      ...result[0],
+      page,
+      limit,
+      hasNextPage: skip + limit < result[0].totalAppointments,
+      hasPreviousPage: page > 1,
+      totalPages: Math.ceil(result[0].totalAppointments / limit),
+    };
   }
 
   async getAgentAppointments(agentId: string, referralCode: string) {

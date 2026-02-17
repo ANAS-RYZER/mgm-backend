@@ -67,4 +67,21 @@ export class OrderController {
       data: order,
     };
   }
+
+  // get all orders
+  @Get()
+  @UseGuards(AdminJwtAuthGuard)
+  getAllOrders(
+    @Query("search") search?: string,
+    @Query("page") page = "1",
+    @Query("limit") limit = "10",
+  ) {
+    return this.orderService.getAllOrders(
+      search,
+      Number(page),
+      Number(limit),
+    );
+  }
+
+
 }

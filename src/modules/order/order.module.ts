@@ -26,6 +26,6 @@ import { AgentCommission, AgentCommissionSchema } from '../agents/schemas/agent.
   ],
   controllers: [OrderController],
   providers: [OrderService],
-  exports: [OrderService], 
+  exports: [OrderService, MongooseModule], 
 })
 export class OrderModule {}

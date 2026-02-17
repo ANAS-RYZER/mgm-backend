@@ -10,10 +10,20 @@ export class AppoitmentDataController {
   constructor(private readonly service: AppoitmenDatatService) {}
 
   @Get("appointment")
+  @UseGuards(AdminJwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  getAdminAppointment(@Query("search") search?: string) {
-    return this.service.getAdminAppointment(search);
+  getAdminAppointment(
+    @Query("search") search?: string,
+    @Query("page") page = "1",
+    @Query("limit") limit = "10",
+  ) {
+    return this.service.getAdminAppointment(
+      search,
+      Number(page),
+      Number(limit),
+    );
   }
+
 
   @Get("agent")
   @UseGuards(AgentJwtAuthGuard)
