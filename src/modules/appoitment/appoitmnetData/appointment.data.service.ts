@@ -218,24 +218,24 @@ export class AppoitmenDatatService {
     appointmentId: string,
     status: AppointmentStatus,
   ) {
-    // Validate Mongo ID
+    //Validate Mongo ID
     if (!isValidObjectId(appointmentId)) {
       throw new BadRequestException("Invalid appointment ID");
     }
 
-    // Validate Status Enum
+    //Validate Status Enum
     if (!Object.values(AppointmentStatus).includes(status)) {
       throw new BadRequestException("Invalid status value");
     }
 
-    // Find Appointment
+    //Find Appointment
     const appointment = await this.appointmentModel.findById(appointmentId);
 
     if (!appointment) {
       throw new NotFoundException("Appointment not found");
     }
 
-    //  Prevent updating if already cancelled
+    // Prevent updating if already cancelled
     if (appointment.status === AppointmentStatus.CANCELLED) {
       throw new ConflictException("Cannot update a cancelled appointment");
     }
@@ -284,7 +284,7 @@ export class AppoitmenDatatService {
     const filter: any = { _id: appointmentId };
     if (or.length) filter.$or = or;
 
-    // ✅ Fetch appointment with only needed fields
+    // Fetch appointment with selected fields + populate user
     const appointment = await this.appointmentModel
       .findOne(filter)
       .select("_id referralCode createdAt status visitType userId productIds")
@@ -298,29 +298,28 @@ export class AppoitmenDatatService {
       throw new NotFoundException("Appointment not found");
     }
 
-    // ✅ Extract user separately
-    const userDetails = appointment.userId;
+    // Extract user + remove refs safely (TS-safe way)
+    const { userId, productIds, ...appointmentData } = appointment;
 
-    // ✅ Normalize product ids
-    const productIds = Array.isArray(appointment.productIds)
-      ? appointment.productIds
-      : appointment.productIds
-      ? [appointment.productIds]
+    // Normalize product ids
+    const ids = Array.isArray(productIds)
+      ? productIds
+      : productIds
+      ? [productIds]
       : [];
 
-    // ✅ Fetch products with only required fields
-    const products = productIds.length
-      ? await this.ProductModel.find({ _id: { $in: productIds } })
+    // Fetch products with selected fields
+    const products = ids.length
+      ? await this.ProductModel.find({ _id: { $in: ids } })
           .select(
             "_id sku name mrpPrice image gallery categories stockQuantity goldSpecs stoneSpecs"
           )
           .lean()
       : [];
 
-    // Final structured response
     return {
-      appointment,
-      user: userDetails,
+      appointment: appointmentData,
+      user: userId || null,
       products,
     };
   }
