@@ -216,4 +216,25 @@ export class ProductsService {
     }
   }
 
+  async getProductBySku(sku: string) {
+  if (!sku) {
+    throw new BadRequestException('SKU is required');
+  }
+
+  const product = await this.productModel
+    .findOne({ sku })
+    .lean()
+    .exec();
+
+  if (!product) {
+    throw new NotFoundException(`Product with SKU ${sku} not found`);
+  }
+
+  return {
+    message: 'Product fetched successfully',
+    data: product,
+  };
+}
+
+
 }

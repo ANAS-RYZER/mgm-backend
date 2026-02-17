@@ -1,0 +1,70 @@
+import {
+  Controller,
+  Post,
+  Put,
+  Get,
+  Param,
+  Body,
+  Query,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+} from '@nestjs/common';
+import { OrderService } from './order.service';
+import { CreateOrderDto } from './dto/create-order.dto';
+import { UpdateOrderDto } from './dto/update-order.dto';
+import { AdminJwtAuthGuard } from '../admins/guards/admin-jwt-auth.guard';
+
+@Controller('orders')
+export class OrderController {
+  constructor(private readonly orderService: OrderService) {}
+
+  // Create Order with appointmentId in query
+  @Post()
+  @UseGuards(AdminJwtAuthGuard)
+  @HttpCode(HttpStatus.CREATED)
+  async create(
+    @Query('appointmentId') appointmentId: string,
+    @Body() createDto: CreateOrderDto,
+  ) {
+    const order = await this.orderService.create(
+      appointmentId,
+      createDto,
+    );
+
+    return {
+      success: true,
+      message: 'Order created successfully',
+      data: order,
+    };
+  }
+
+  //  Update Order
+  @Put(':id')
+  @UseGuards(AdminJwtAuthGuard)
+  async update(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateOrderDto,
+  ) {
+    const order = await this.orderService.update(id, updateDto);
+
+    return {
+      success: true,
+      message: 'Order updated successfully',
+      data: order,
+    };
+  }
+
+  // ✅ Get Single Order
+  @Get(':id')
+  @UseGuards(AdminJwtAuthGuard)
+  async findOne(@Param('id') id: string) {
+    const order = await this.orderService.findOne(id);
+
+    return {
+      success: true,
+      message: 'Order fetched successfully',
+      data: order,
+    };
+  }
+}

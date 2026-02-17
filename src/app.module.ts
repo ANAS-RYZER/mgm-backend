@@ -18,7 +18,7 @@ import { PriceModule } from './modules/price/price.module';
 import {
 AppoitmentModule
 } from './modules/appoitment/appointment.module'
-
+import { OrderModule } from './modules/order/order.module';
 
 @Module({
   imports: [
@@ -39,6 +39,7 @@ AppoitmentModule
     UserRequestsModule,
     PriceModule,
     AppoitmentModule,
+    OrderModule
   ],
   controllers: [AppController],
   providers: [AppService],
