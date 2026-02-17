@@ -23,6 +23,8 @@ import {
 import { AgentDashboardController } from "./dashboard/agent.dashboard.controller";
 import { AgentDashboardService } from "./dashboard/agent.dashboard.service";
 import { User, UserSchema } from "../users/schemas/user.schema";
+import { Product, ProductSchema } from "../products/schemas/product.schema";
+import { Order, OrderSchema } from "../order/schema/order.schema";
 
 @Module({
   imports: [
@@ -31,6 +33,8 @@ import { User, UserSchema } from "../users/schemas/user.schema";
       { name: AgentProfile.name, schema: AgentProfileSchema },
       { name: AgentCounter.name, schema: AgentCounterSchema },
       { name: User.name, schema: UserSchema },
+      { name: Product.name, schema: ProductSchema },
+      { name: Order.name, schema: OrderSchema },
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],

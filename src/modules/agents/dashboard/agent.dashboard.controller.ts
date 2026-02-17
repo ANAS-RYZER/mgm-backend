@@ -1,4 +1,4 @@
-import { Controller, Get, Req, UnauthorizedException, UseGuards } from "@nestjs/common";
+import { Controller, Get, Param, Req, UnauthorizedException, UseGuards } from "@nestjs/common";
 import { AgentDashboardService } from "./agent.dashboard.service";
 import { AgentJwtAuthGuard } from "../guards/agent-jwt-auth.guard";
 import type { Request } from "express";
@@ -13,6 +13,26 @@ export class AgentDashboardController {
     const customers = await this.agentDashboardService.getCustomersByAgentId(agentId);
     return customers;
   }
+
+  @Get('customer/:userId')
+  @UseGuards(AgentJwtAuthGuard)
+  async getCustomerDetails(
+    @Req() req: Request,
+    @Param('userId') userId: string,
+  ) {
+    const agentId = req['agent']?.agentId;
+
+    const data = await this.agentDashboardService.getCustomerForAgent(agentId, userId);
+
+    return {
+      success: true,
+      message: 'Customer details fetched successfully',
+      data,
+    };
+  }
+
+
+
 
   @Get('me')
   @UseGuards(AgentJwtAuthGuard)
