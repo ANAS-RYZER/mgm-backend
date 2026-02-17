@@ -65,13 +65,12 @@ export class ProductsController {
     };
   }
 
-
-  @Get("/by-sku/:sku")
+  @Get("/sku/:sku")
   @HttpCode(HttpStatus.OK)
-  @UseGuards(AdminJwtAuthGuard)
-  async getProductBySku(@Param('sku') sku: string) {
+  async getProductBySku(@Param("sku") sku: string) {
     return this.productsService.getProductBySku(sku);
   }
+
 
 
   @Get("/:id")
@@ -90,5 +89,4 @@ export class ProductsController {
   ) {
     return this.productsService.updateProduct(productId, updateProductDto);
   }
-
 }

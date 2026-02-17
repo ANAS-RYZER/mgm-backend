@@ -32,7 +32,7 @@ export class ProductsService {
     @InjectModel(Product.name)
     private readonly productModel: Model<ProductDocument>,
 
-    private readonly wishlistService: WishlistService
+    private readonly wishlistService: WishlistService,
   ) {}
 
   private generateSku(category: Categories): string {
@@ -70,9 +70,7 @@ export class ProductsService {
       } else {
         const exists = await this.productModel.findOne({ sku });
         if (exists) {
-          throw new ConflictException(
-            `Product with SKU ${sku} already exists`,
-          );
+          throw new ConflictException(`Product with SKU ${sku} already exists`);
         }
       }
 
@@ -85,7 +83,10 @@ export class ProductsService {
         `Failed to add product SKU: ${productData.name ?? "auto-generated"}`,
         error.stack,
       );
-      if (error instanceof ConflictException || error instanceof InternalServerErrorException) {
+      if (
+        error instanceof ConflictException ||
+        error instanceof InternalServerErrorException
+      ) {
         throw error;
       }
       throw new InternalServerErrorException(
@@ -129,7 +130,6 @@ export class ProductsService {
     if (sortPrice === "desc") sort.mrpPrice = -1;
 
     const skip = (page - 1) * limit;
-    
 
     try {
       const [products, totalCount] = await Promise.all([
@@ -163,7 +163,6 @@ export class ProductsService {
     }
   }
 
-
   async getProductById(productId: string): Promise<Product> {
     try {
       const product = await this.productModel
@@ -184,10 +183,7 @@ export class ProductsService {
     }
   }
 
-  async updateProduct(
-    productId: string,
-    updateData: any,
-    ): Promise<Product> {
+  async updateProduct(productId: string, updateData: any): Promise<Product> {
     try {
       const updatedProduct = await this.productModel
         .findByIdAndUpdate(
@@ -199,9 +195,7 @@ export class ProductsService {
         .exec();
 
       if (!updatedProduct) {
-        throw new NotFoundException(
-          `Product with ID ${productId} not found`,
-        );
+        throw new NotFoundException(`Product with ID ${productId} not found`);
       }
 
       return updatedProduct;
@@ -210,31 +204,34 @@ export class ProductsService {
         throw error;
       }
 
-      throw new InternalServerErrorException(
-        "Failed to update product",
-      );
+      throw new InternalServerErrorException("Failed to update product");
     }
   }
 
-  async getProductBySku(sku: string) {
-  if (!sku) {
-    throw new BadRequestException('SKU is required');
+
+  async getProductBySku(sku: string): Promise<Product> {
+    try {
+      const product = await this.productModel
+        .findOne({ sku })
+        .select("-__v -createdAt -updatedAt")
+        .lean()
+        .exec();
+
+      if (!product) {
+        throw new NotFoundException(`Product with SKU ${sku} not found`);
+      }
+
+      return product;
+    } catch (error) {
+      this.logger.error(
+        `Failed to retrieve product by SKU: ${sku}`,
+        error.stack,
+      );
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException("Failed to retrieve product");
+    }
   }
-
-  const product = await this.productModel
-    .findOne({ sku })
-    .lean()
-    .exec();
-
-  if (!product) {
-    throw new NotFoundException(`Product with SKU ${sku} not found`);
-  }
-
-  return {
-    message: 'Product fetched successfully',
-    data: product,
-  };
-}
-
 
 }
