@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 export type AppointmentDocument = Appointment & Document;
 
@@ -19,8 +19,8 @@ export enum AppointmentStatus {
 
 @Schema({ timestamps: true })
 export class Appointment {
-  @Prop({ required: true })
-  userId: string;
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  userId: Types.ObjectId;
 
   @Prop({ required: true })
   date: string; // YYYY-MM-DD

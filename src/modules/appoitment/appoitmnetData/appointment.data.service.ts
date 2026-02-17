@@ -257,4 +257,72 @@ export class AppoitmenDatatService {
 
     return appointment;
   }
+
+
+  async getSingleAgentAppointment(
+    appointmentId: string,
+    agentId: string,
+    referralCode: string,
+  ) {
+    const or: Record<string, string>[] = [];
+
+    // Prefer referralCode from token
+    if (referralCode) {
+      or.push(
+        { referralCode },
+        { agentId: referralCode },
+        { agentid: referralCode },
+      );
+    }
+
+    // fallback to agentId
+    if (!referralCode && agentId) {
+      or.push({ agentId }, { agentid: agentId });
+    }
+
+    // Appointment must match id + agent ownership
+    const filter: any = { _id: appointmentId };
+    if (or.length) filter.$or = or;
+
+    // ✅ Fetch appointment with only needed fields
+    const appointment = await this.appointmentModel
+      .findOne(filter)
+      .select("_id referralCode createdAt status visitType userId productIds")
+      .populate({
+        path: "userId",
+        select: "fullName email refId avatar createdAt",
+      })
+      .lean();
+
+    if (!appointment) {
+      throw new NotFoundException("Appointment not found");
+    }
+
+    // ✅ Extract user separately
+    const userDetails = appointment.userId;
+
+    // ✅ Normalize product ids
+    const productIds = Array.isArray(appointment.productIds)
+      ? appointment.productIds
+      : appointment.productIds
+      ? [appointment.productIds]
+      : [];
+
+    // ✅ Fetch products with only required fields
+    const products = productIds.length
+      ? await this.ProductModel.find({ _id: { $in: productIds } })
+          .select(
+            "_id sku name mrpPrice image gallery categories stockQuantity goldSpecs stoneSpecs"
+          )
+          .lean()
+      : [];
+
+    // Final structured response
+    return {
+      appointment,
+      user: userDetails,
+      products,
+    };
+  }
+
 }
