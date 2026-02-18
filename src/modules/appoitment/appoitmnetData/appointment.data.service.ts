@@ -214,7 +214,7 @@ export class AppoitmenDatatService {
       this.ProductModel.find({
         _id: { $in: appointment.productIds || [] },
       })
-        .select("name sku mrpPrice goldSpecs stoneSpecs image")
+        .select("name sku mrpPrice goldSpecs stoneSpecs image makingChanges cgst netprice grossPrice discountedPrice discountedPercentage sgst va")
         .lean(),
     ]);
     console.log({ user, agent, products });

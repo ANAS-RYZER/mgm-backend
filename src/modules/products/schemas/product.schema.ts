@@ -55,8 +55,8 @@ export class GoldSpecs {
 
 
 
-  @Prop({ required: true })
-  makingCharges: number;
+  // @Prop({ required: true })
+  // makingCharges: number;
 
   @Prop({ required: true })
   metal: string;

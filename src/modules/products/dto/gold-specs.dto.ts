@@ -9,8 +9,7 @@ export class GoldSpecsDto {
   @IsNumber()
   goldWeight: number;
 
-  @IsNumber()
-  makingCharges: number;
+ 
 
   @IsString()
   metal: string; // ex: "Gold"
