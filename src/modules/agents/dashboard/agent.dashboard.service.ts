@@ -40,8 +40,7 @@ export class AgentDashboardService {
     return agent;
   }
 
- async getCustomerForAgent(agentId: string, userId: string) {
-
+  async getCustomerById(agentId: string, userId: string) {
     // Check agent exists
     const agent = await this.agentProfileModel.findById(agentId);
     if (!agent) {
@@ -50,57 +49,75 @@ export class AgentDashboardService {
 
     const refId = agent.referralCode?.toString();
 
-    // Verify user belongs to this agent
+    // Find user by id AND match referral id
     const user = await this.userModel
-      .findOne({ _id: userId, refId })
-      .select('-password -isEmailVerified -updatedAt')
+      .findOne({
+        _id: userId,
+        refId: refId,
+      })
+      .select('-password -isEmailVerified -createdAt -updatedAt')
       .lean();
 
     if (!user) {
-      throw new ForbiddenException(
-        'This customer does not belong to this agent'
-      );
+      throw new NotFoundException('User not found for this agent');
     }
 
-    // Fetch appointments
-    const appointments = await this.appointmentModel
-      .find({ userId })
-      .lean();
+    return { user };
+  }
 
-    if (!appointments.length) {
-      return { user, appointments: [] };
-    }
+  async getUserAppointments(
+    agentId: string,
+    userId: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
+    // verify agent
+    const agent = await this.agentProfileModel.findById(agentId);
+    if (!agent) throw new NotFoundException('Agent not found');
 
-    // Collect productIds
-    const allProductIds = appointments.flatMap(a => a.productIds || []);
+    const referralCode = agent.referralCode?.toString();
 
-    // Fetch ONLY sku + name from products
-    const products = await this.productModel
-      .find(
-        { _id: { $in: allProductIds } },
-        { sku: 1, name: 1, mrpPrice:1, image:1, gallery:1, categories:1,  goldSpecs:1, stoneSpecs:1}   // projection (only needed fields)
-      )
-      .lean();
-
-    // Create map
-    const productMap = {};
-    products.forEach(p => {
-      productMap[p._id.toString()] = p;
+    // verify user belongs to agent
+    const user = await this.userModel.findOne({
+      _id: userId,
+      refId: referralCode,
     });
+    if (!user) throw new NotFoundException('User not linked to this agent');
 
-    // Attach minimal product info to appointments
-    const appointmentsWithProducts = appointments.map(app => ({
-      ...app,
-      products: (app.productIds || []).map(
-        id => productMap[id.toString()] || null
-      )
-    }));
+    // pagination calc
+    const skip = (page - 1) * limit;
 
-    //Final response
+    // fetch appointments with pagination
+    const [appointments, total] = await Promise.all([
+      this.appointmentModel
+        .find({
+          userId: userId,
+          referralCode: referralCode,
+        })
+        .populate({
+          path: 'productIds',
+          select: 'sku name mrpPrice gallery image goldSpecs stoneSpecs',
+          model: 'Product',
+        })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+
+      this.appointmentModel.countDocuments({
+        userId: userId,
+        referralCode: referralCode,
+      }),
+    ]);
+
     return {
-      user,
-      appointments: appointmentsWithProducts
+      appointments,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
     };
   }
+
+
 
 }

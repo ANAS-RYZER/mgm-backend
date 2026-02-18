@@ -29,7 +29,7 @@ export class ProductsController {
   @Post("/add-product")
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(NormalizeStoneSpecsInterceptor)
-  // @UseGuards(AdminJwtAuthGuard)
+  @UseGuards(AdminJwtAuthGuard)
   async addProduct(@Body() addProductDto: AddProductDto) {
     console.log("addProductDto", addProductDto);
     return this.productsService.addProduct(addProductDto);
@@ -70,8 +70,6 @@ export class ProductsController {
   async getProductBySku(@Param("sku") sku: string) {
     return this.productsService.getProductBySku(sku);
   }
-
-
 
   @Get("/:id")
   @HttpCode(HttpStatus.OK)

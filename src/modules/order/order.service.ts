@@ -12,7 +12,7 @@ import { Appointment, AppointmentDocument } from '../appoitment/schema/appointme
 import { Product, ProductDocument } from '../products/schemas/product.schema';
 import { AgentProfile, AgentProfileDocument } from '../agents/schemas/agent.profile.schema';
 import { AgentCommission, AgentCommissionDocument } from '../agents/schemas/agent.commission.schema';
-
+import { User, UserDocument } from '../users/schemas/user.schema';
 @Injectable()
 export class OrderService {
   constructor(
@@ -26,7 +26,8 @@ export class OrderService {
     private agentProfileModel: Model<AgentProfileDocument>,
     @InjectModel(AgentCommission.name)
     private agentCommissionModel: Model<AgentCommissionDocument>,
-
+    @InjectModel(User.name)
+    private userModel: Model<UserDocument>
   ) {}
 
   // Create Order
@@ -184,6 +185,132 @@ export class OrderService {
         productDetails,
     };
     }
+
+  async getAllOrders(
+    search?: string,
+    page = 1,
+    limit = 10,
+    ) {
+
+    const skip = (page - 1) * limit;
+    let orderFilter: any = {};
+
+    // SEARCH LOGIC
+    if (search?.trim()) {
+        const regex = new RegExp(search.trim(), "i");
+
+        // find matching users
+        const users = await this.userModel
+        .find({
+            $or: [
+            { username: regex },
+            { email: regex },
+            ],
+        })
+        .select("_id")
+        .lean();
+
+        const userIds = users.map(u => u._id);
+
+        // find matching products
+        const products = await this.productModel
+        .find({
+            $or: [
+            { name: regex },
+            { sku: regex },
+            ],
+        })
+        .select("sku")
+        .lean();
+
+        const skus = products.map(p => p.sku);
+
+        // build order filter
+        orderFilter.$or = [
+        { userId: { $in: userIds } },
+        { productSku: { $in: skus } },
+        ];
+    }
+
+    // fetch orders + count together
+    const [orders, totalCount] = await Promise.all([
+
+        this.orderModel
+        .find(orderFilter)
+        .populate({
+            path: "userId",
+            model: "User",
+            select: "username email",
+        })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+
+        this.orderModel.countDocuments(orderFilter),
+    ]);
+
+    if (!orders.length) {
+        return {
+        orders: [],
+        page,
+        limit,
+        currentPage: page,
+        hasNextPage: false,
+        hasPreviousPage: false,
+        totalCount,
+        totalPages: 0,
+        };
+    }
+
+    // collect SKUs
+    const allSkus = orders.flatMap(o => o.productSku || []);
+
+    // fetch product names
+    const products = await this.productModel
+        .find({ sku: { $in: allSkus } })
+        .select("sku name")
+        .lean();
+
+    const productMap = {};
+    products.forEach(p => {
+        productMap[p.sku] = p.name;
+    });
+
+    //  format response
+    const formattedOrders = orders.map(order => ({
+        _id: order._id,
+        appointmentId: order.appointmentId,
+        totalPrice: order.totalPrice,
+        status: order.status,
+
+        user: order.userId
+        ? {
+            id: (order.userId as any)._id,
+            username: (order.userId as any).username,
+            email: (order.userId as any).email,
+            }
+        : null,
+
+        products: (order.productSku || []).map(sku => ({
+        sku,
+        name: productMap[sku] || null,
+        })),
+    }));
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return {
+        orders: formattedOrders,
+        page,
+        limit,
+        currentPage: page,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+        totalCount,
+        totalPages,
+    };
+    }
+
 
 
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Req, UnauthorizedException, UseGuards } from "@nestjs/common";
+import { Controller, Get, Param, Req, UnauthorizedException, UseGuards, Query } from "@nestjs/common";
 import { AgentDashboardService } from "./agent.dashboard.service";
 import { AgentJwtAuthGuard } from "../guards/agent-jwt-auth.guard";
 import type { Request } from "express";
@@ -14,25 +14,28 @@ export class AgentDashboardController {
     return customers;
   }
 
-  @Get('customer/:userId')
+  @Get('user/:id')
   @UseGuards(AgentJwtAuthGuard)
-  async getCustomerDetails(
-    @Req() req: Request,
-    @Param('userId') userId: string,
-  ) {
-    const agentId = req['agent']?.agentId;
-
-    const data = await this.agentDashboardService.getCustomerForAgent(agentId, userId);
-
-    return {
-      success: true,
-      message: 'Customer details fetched successfully',
-      data,
-    };
+  async getUserById(@Param('id') userId: string, @Req() req: Request) {
+    const agentId = req['agent'].agentId;
+    return this.agentDashboardService.getCustomerById(agentId, userId);
   }
 
-
-
+  @Get('user/:id/appointments')
+  @UseGuards(AgentJwtAuthGuard)
+  async getUserAppointments(
+    @Param('id') userId: string,
+    @Req() req: Request,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+  ) {
+    const agentId = req['agent'].agentId;
+    return this.agentDashboardService.getUserAppointments(agentId, 
+        userId,
+        Number(page),
+        Number(limit),
+      );
+  }
 
   @Get('me')
   @UseGuards(AgentJwtAuthGuard)

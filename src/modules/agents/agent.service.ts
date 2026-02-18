@@ -89,11 +89,61 @@ export class AgentService {
       .lean()
       .sort({ createdAt: -1 });
   }
-  async getAllAgents(): Promise<AgentProfile[]> {
-    return this.agentProfileModel
-      .find()
-      .select("-password -bankDetails -governmentId -createdAt -updatedAt")
-      .lean();
+  
+  async getAllAgents(
+    search?: string,
+    page = 1,
+    limit = 10,
+  ): Promise<{
+    agents: AgentProfile[];
+    page: number;
+    limit: number;
+    currentPage: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+    totalCount: number;
+    totalPages: number;
+  }> {
+
+    const filter: any = {};
+
+    // SEARCH across multiple fields
+    if (search?.trim()) {
+      const regex = new RegExp(search.trim(), "i");
+
+      filter.$or = [
+        { referralCode: regex },
+        { name: regex },
+        { email: regex },
+        { phoneNumber: regex },
+      ];
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [agents, totalCount] = await Promise.all([
+      this.agentProfileModel
+        .find(filter)
+        .select("-password -bankDetails -governmentId -createdAt -updatedAt")
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+
+      this.agentProfileModel.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return {
+      agents,
+      page,
+      limit,
+      currentPage: page,
+      hasNextPage: page < totalPages,
+      hasPreviousPage: page > 1,
+      totalCount,
+      totalPages,
+    };
   }
 
   // Get agent by ID
