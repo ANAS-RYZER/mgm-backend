@@ -55,7 +55,7 @@ export class AgentDashboardService {
         _id: userId,
         refId: refId,
       })
-      .select('-password -isEmailVerified -createdAt -updatedAt')
+      .select('-password -isEmailVerified  -updatedAt')
       .lean();
 
     if (!user) {
