@@ -16,20 +16,30 @@ export class AgentDashboardService {
  @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
 @InjectModel(Appointment.name) private appointmentModel: Model<AppointmentDocument>) {}
 
-  async getCustomersByAgentId(agentId: string) {
+  async getCustomersByAgentId(agentId: string, search?: string) {
     const agent = await this.agentProfileModel.findOne({ _id: agentId });
     if (!agent) {
       throw new NotFoundException('Agent not found');
     }
     const refId = agent.referralCode?.toString();
-
+    // Base filter
+    const filter: any = {
+      refId: refId,
+    };
+    // Add search condition
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+      ];
+    }
     const customers = await this.userModel
-      .find({ refId: refId })
+      .find(filter)
       .select('-password -isEmailVerified -createdAt -updatedAt')
       .lean();
 
     return {
-      customers: customers,
+      customers,
     };
   }
 
