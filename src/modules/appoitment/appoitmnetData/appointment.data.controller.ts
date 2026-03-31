@@ -1,9 +1,21 @@
-import { Body, Controller, Get, Post, Query, Req, UseGuards, Param, Patch, HttpCode, HttpStatus } from '@nestjs/common';
-import type { Request } from 'express';
-import { AppoitmenDatatService } from './appointment.data.service';
-import { AgentJwtAuthGuard } from 'src/modules/agents/guards/agent-jwt-auth.guard';
-import { AdminJwtAuthGuard } from 'src/modules/admins/guards/admin-jwt-auth.guard';
-import {AppointmentStatus} from '../dto/appoitment.dto';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+  Param,
+  Patch,
+  HttpCode,
+  HttpStatus,
+} from "@nestjs/common";
+import type { Request } from "express";
+import { AppoitmenDatatService } from "./appointment.data.service";
+import { AgentJwtAuthGuard } from "src/modules/agents/guards/agent-jwt-auth.guard";
+import { AdminJwtAuthGuard } from "src/modules/admins/guards/admin-jwt-auth.guard";
+import { AppointmentStatus } from "../dto/appoitment.dto";
 
 @Controller("dashboard")
 export class AppoitmentDataController {
@@ -24,7 +36,6 @@ export class AppoitmentDataController {
     );
   }
 
-
   @Get("agent")
   @UseGuards(AgentJwtAuthGuard)
   async getagentsAppointment(@Req() req: Request) {
@@ -38,25 +49,27 @@ export class AppoitmentDataController {
     return { data };
   }
 
-  @Get('admin/appointment/:id')
+  @Get("admin/appointment/:id")
   @UseGuards(AdminJwtAuthGuard)
-  async getAdminAppointmentById(@Param('id') id: string) {
-      return this.service.getAppointmentsById(id);
-    }
+  async getAdminAppointmentById(@Param("id") id: string) {
+    return this.service.getAppointmentsById(id);
+  }
 
-  @Patch(':id/status')
+  @Patch("admin/appointment/:id/status")
   @UseGuards(AdminJwtAuthGuard)
   async updateStatus(
-    @Param('id') id: string,
-    @Body('status') status: AppointmentStatus,
+    @Param("id") id: string,
+    @Body("status") status: AppointmentStatus,
   ) {
-  const updatedAppointment =
-    await this.service.updateAppointmentStatus(id, status);
+    const updatedAppointment = await this.service.updateAppointmentStatus(
+      id,
+      status,
+    );
 
-  return {
-    success: true,
-    message: 'Appointment status updated successfully',
-    data: updatedAppointment,
-  };
-}
+    return {
+      success: true,
+      message: "Appointment status updated successfully",
+      data: updatedAppointment,
+    };
+  }
 }

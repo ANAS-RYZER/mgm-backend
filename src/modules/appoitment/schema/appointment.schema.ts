@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { AppointmentStatus } from '../dto/appoitment.dto';
 
 export type AppointmentDocument = Appointment & Document;
 
@@ -9,12 +10,7 @@ export enum SlotCode {
   NIGHT = 'NIGHT',
 }
 
-export enum AppointmentStatus {
-  CONFIRMED = 'CONFIRMED',
-  CANCELLED = 'CANCELLED',
-  ISPURCHASED = 'ISPURCHASED',
-  ISVISITED = 'ISVISITED',
-}
+
 
 
 @Schema({ timestamps: true })
