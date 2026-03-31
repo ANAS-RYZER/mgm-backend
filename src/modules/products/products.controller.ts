@@ -12,6 +12,7 @@ import {
   Req,
   UseGuards,
   UseInterceptors,
+  Request,
 } from "@nestjs/common";
 import { ProductsService } from "./products.service";
 import { AddProductDto } from "./dto/add.product.dto";
@@ -37,12 +38,18 @@ export class ProductsController {
   @Get("/all")
   @HttpCode(HttpStatus.OK)
   async getAllProducts(
+    @Request() req: any,
     @Query("search") search?: string,
     @Query("category") category?: Categories,
     @Query("sortPrice") sortPrice?: "asc" | "desc",
     @Query("page") page = "1",
     @Query("limit") limit = "10",
   ) {
+    const ip =
+      req.headers["x-forwarded-for"] || // real client IP (if behind proxy)
+    console.log("Request object:", req);
+
+    console.log("Ip address:", ip);
     const result = await this.productsService.getAllProducts(
       search,
       category,

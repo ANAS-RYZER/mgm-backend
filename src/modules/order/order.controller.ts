@@ -9,13 +9,13 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
-} from '@nestjs/common';
-import { OrderService } from './order.service';
-import { CreateOrderDto } from './dto/create-order.dto';
-import { UpdateOrderDto } from './dto/update-order.dto';
-import { AdminJwtAuthGuard } from '../admins/guards/admin-jwt-auth.guard';
+} from "@nestjs/common";
+import { OrderService } from "./order.service";
+import { CreateOrderDto } from "./dto/create-order.dto";
+import { UpdateOrderDto } from "./dto/update-order.dto";
+import { AdminJwtAuthGuard } from "../admins/guards/admin-jwt-auth.guard";
 
-@Controller('orders')
+@Controller("orders")
 export class OrderController {
   constructor(private readonly orderService: OrderService) {}
 
@@ -24,46 +24,40 @@ export class OrderController {
   @UseGuards(AdminJwtAuthGuard)
   @HttpCode(HttpStatus.CREATED)
   async create(
-    @Query('appointmentId') appointmentId: string,
+    @Query("appointmentId") appointmentId: string,
     @Body() createDto: CreateOrderDto,
   ) {
-    const order = await this.orderService.create(
-      appointmentId,
-      createDto,
-    );
+    const order = await this.orderService.create(appointmentId, createDto);
 
     return {
       success: true,
-      message: 'Order created successfully',
+      message: "Order recorded successfully",
       data: order,
     };
   }
 
   //  Update Order
-  @Put(':id')
+  @Put(":id")
   @UseGuards(AdminJwtAuthGuard)
-  async update(
-    @Param('id') id: string,
-    @Body() updateDto: UpdateOrderDto,
-  ) {
+  async update(@Param("id") id: string, @Body() updateDto: UpdateOrderDto) {
     const order = await this.orderService.update(id, updateDto);
 
     return {
       success: true,
-      message: 'Order updated successfully',
-      data: order,
+      message: "Order updated successfully",
+      data: { orderId: order._id },
     };
   }
 
   // ✅ Get Single Order
-  @Get(':id')
+  @Get(":id")
   @UseGuards(AdminJwtAuthGuard)
-  async findOne(@Param('id') id: string) {
+  async findOne(@Param("id") id: string) {
     const order = await this.orderService.findOne(id);
 
     return {
       success: true,
-      message: 'Order fetched successfully',
+      message: "Order fetched successfully",
       data: order,
     };
   }
@@ -76,12 +70,6 @@ export class OrderController {
     @Query("page") page = "1",
     @Query("limit") limit = "10",
   ) {
-    return this.orderService.getAllOrders(
-      search,
-      Number(page),
-      Number(limit),
-    );
+    return this.orderService.getAllOrders(search, Number(page), Number(limit));
   }
-
-
 }
