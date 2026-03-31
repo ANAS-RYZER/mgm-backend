@@ -23,7 +23,9 @@ import {
 import { AgentDashboardController } from "./dashboard/agent.dashboard.controller";
 import { AgentDashboardService } from "./dashboard/agent.dashboard.service";
 import { User, UserSchema } from "../users/schemas/user.schema";
-
+import { Product, ProductSchema } from "../products/schemas/product.schema";
+import { Order, OrderSchema } from "../order/schema/order.schema";
+import { Appointment,AppointmentSchema } from "../appoitment/schema/appointment.schema";
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -31,6 +33,9 @@ import { User, UserSchema } from "../users/schemas/user.schema";
       { name: AgentProfile.name, schema: AgentProfileSchema },
       { name: AgentCounter.name, schema: AgentCounterSchema },
       { name: User.name, schema: UserSchema },
+      { name: Product.name, schema: ProductSchema },
+      { name: Order.name, schema: OrderSchema },
+      {name : Appointment.name, schema: AppointmentSchema}
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],

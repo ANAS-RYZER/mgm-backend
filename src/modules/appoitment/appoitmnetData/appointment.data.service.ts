@@ -30,14 +30,19 @@ export class AppoitmenDatatService {
     @InjectModel(Product.name)
     private readonly ProductModel: Model<ProductDocument>,
   ) {}
-  async getAdminAppointment(search?: string) {
+  async getAdminAppointment(
+    search?: string,
+    page = 1,
+    limit = 10,
+  ) {
+    const skip = (page - 1) * limit;
+
     const adminAppointmentPipeline: PipelineStage[] = [
       {
         $addFields: {
           userObjectId: { $toObjectId: "$userId" },
         },
       },
-
       {
         $lookup: {
           from: "users",
@@ -46,7 +51,6 @@ export class AppoitmenDatatService {
           as: "user",
         },
       },
-
       { $unwind: "$user" },
 
       {
@@ -71,7 +75,6 @@ export class AppoitmenDatatService {
           as: "partner",
         },
       },
-
       {
         $unwind: {
           path: "$partner",
@@ -79,7 +82,6 @@ export class AppoitmenDatatService {
         },
       },
 
-      // 🔥 GLOBAL SEARCH STAGE
       ...(search
         ? [
             {
@@ -110,10 +112,16 @@ export class AppoitmenDatatService {
 
       {
         $facet: {
-          appointments: [{ $match: {} }],
+          // PAGINATED DATA
+          appointments: [
+            { $skip: skip },
+            { $limit: limit },
+          ],
 
+          // TOTAL COUNT
           totalAppointments: [{ $count: "count" }],
 
+          // TODAY COUNT
           todayAppointments: [
             {
               $match: {
@@ -138,11 +146,16 @@ export class AppoitmenDatatService {
       },
     ];
 
-    const result = await this.appointmentModel
-      .aggregate(adminAppointmentPipeline)
-      .exec();
+    const result = await this.appointmentModel.aggregate(adminAppointmentPipeline);
 
-    return result[0];
+    return {
+      ...result[0],
+      page,
+      limit,
+      hasNextPage: skip + limit < result[0].totalAppointments,
+      hasPreviousPage: page > 1,
+      totalPages: Math.ceil(result[0].totalAppointments / limit),
+    };
   }
 
   async getAgentAppointments(agentId: string, referralCode: string) {
@@ -201,7 +214,7 @@ export class AppoitmenDatatService {
       this.ProductModel.find({
         _id: { $in: appointment.productIds || [] },
       })
-        .select("name sku mrpPrice goldSpecs stoneSpecs image")
+        .select("name sku mrpPrice goldSpecs stoneSpecs image makingChanges cgst netprice grossPrice discountedPrice discountedPercentage sgst va")
         .lean(),
     ]);
     console.log({ user, agent, products });
@@ -258,70 +271,5 @@ export class AppoitmenDatatService {
     return appointment;
   }
 
-
-  async getSingleAgentAppointment(
-    appointmentId: string,
-    agentId: string,
-    referralCode: string,
-  ) {
-    const or: Record<string, string>[] = [];
-
-    // Prefer referralCode from token
-    if (referralCode) {
-      or.push(
-        { referralCode },
-        { agentId: referralCode },
-        { agentid: referralCode },
-      );
-    }
-
-    // fallback to agentId
-    if (!referralCode && agentId) {
-      or.push({ agentId }, { agentid: agentId });
-    }
-
-    // Appointment must match id + agent ownership
-    const filter: any = { _id: appointmentId };
-    if (or.length) filter.$or = or;
-
-    // Fetch appointment with selected fields + populate user
-    const appointment = await this.appointmentModel
-      .findOne(filter)
-      .select("_id referralCode createdAt status visitType userId productIds")
-      .populate({
-        path: "userId",
-        select: "fullName email refId avatar createdAt",
-      })
-      .lean();
-
-    if (!appointment) {
-      throw new NotFoundException("Appointment not found");
-    }
-
-    // Extract user + remove refs safely (TS-safe way)
-    const { userId, productIds, ...appointmentData } = appointment;
-
-    // Normalize product ids
-    const ids = Array.isArray(productIds)
-      ? productIds
-      : productIds
-      ? [productIds]
-      : [];
-
-    // Fetch products with selected fields
-    const products = ids.length
-      ? await this.ProductModel.find({ _id: { $in: ids } })
-          .select(
-            "_id sku name mrpPrice image gallery categories stockQuantity goldSpecs stoneSpecs"
-          )
-          .lean()
-      : [];
-
-    return {
-      appointment: appointmentData,
-      user: userId || null,
-      products,
-    };
-  }
 
 }

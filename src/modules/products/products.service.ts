@@ -114,10 +114,13 @@ export class ProductsService {
   }> {
     const filter: any = {};
 
-    if (search) {
+    if (search?.trim()) {
+      const regex = new RegExp(search.trim(), "i");
+
       filter.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { sku: { $regex: search, $options: "i" } },
+        { name: regex },
+        { sku: regex },
+        { categories: regex },  
       ];
     }
 
