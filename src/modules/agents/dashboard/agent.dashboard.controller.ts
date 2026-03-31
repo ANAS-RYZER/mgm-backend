@@ -8,9 +8,18 @@ export class AgentDashboardController {
   constructor(private readonly agentDashboardService: AgentDashboardService) {}
   @Get('customers')
   @UseGuards(AgentJwtAuthGuard) 
-  async getCustomers(@Req() req: Request) {
+  async getCustomers(
+    @Req() req: Request,
+    @Query('search') search?: string,
+  ) {
     const agentId = req['agent'].agentId;
-    const customers = await this.agentDashboardService.getCustomersByAgentId(agentId);
+
+    const customers =
+      await this.agentDashboardService.getCustomersByAgentId(
+        agentId,
+        search,
+      );
+
     return customers;
   }
 
