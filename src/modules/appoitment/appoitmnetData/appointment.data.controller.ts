@@ -38,15 +38,47 @@ export class AppoitmentDataController {
 
   @Get("agent")
   @UseGuards(AgentJwtAuthGuard)
-  async getagentsAppointment(@Req() req: Request) {
+  async getagentsAppointment(
+    @Req() req: Request,
+    @Query("search") search?: string,
+    @Query("status") status?: string,
+  ) {
     const agentId = (req as any).agent?.agentId ?? "";
     const agentReferralCode = (req as any).agentReferralCode ?? "";
+
     const data = await this.service.getAgentAppointments(
       agentId,
       agentReferralCode,
+      search,
+      status,
     );
-    console.log(data, "data");
+
     return { data };
+  }
+
+  @Get('agentappointmentdetails/:id')
+  @UseGuards(AgentJwtAuthGuard)
+  async getAppointmentDetails(
+    @Param('id') id: string,
+    @Req() req: Request,
+  ) {
+    const agentId = (req as any).agent?.agentId ?? '';
+    const agentReferralCode = (req as any).agentReferralCode ?? '';
+
+    return this.service.getAppointmentDetails(
+      id,
+      agentId,
+      agentReferralCode,
+    );
+  }
+
+  @Get('counts')
+  @UseGuards(AgentJwtAuthGuard)
+  async getCounts(@Req() req: Request) {
+    const agentId = (req as any).agent?.agentId ?? '';
+    const referralCode = (req as any).agentReferralCode ?? '';
+
+    return this.service.getAppointmentCounts(agentId, referralCode);
   }
 
   @Get("admin/appointment/:id")
