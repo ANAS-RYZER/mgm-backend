@@ -7,7 +7,7 @@ import {
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, PipelineStage, isValidObjectId } from "mongoose";
 import { Appointment, AppointmentDocument } from "../schema/appointment.schema";
-import { User, UserDocument } from "src/modules/users/schemas/user.schema";
+import { User, UserDocument } from "../../users/schemas/user.schema";
 import {
   AgentProfile,
   AgentProfileDocument,
@@ -29,6 +29,9 @@ export class AppoitmenDatatService {
     private readonly AgentProfileModel: Model<AgentProfileDocument>,
     @InjectModel(Product.name)
     private readonly ProductModel: Model<ProductDocument>,
+    @InjectModel(User.name)
+    private readonly userModel : Model<UserDocument>,
+
   ) {}
   async getAdminAppointment(
     search?: string,
@@ -159,31 +162,71 @@ export class AppoitmenDatatService {
   }
 
   async getAgentAppointments(agentId: string, referralCode: string) {
-    // Appointments may store the agent reference under different fields.
-    // Prefer referralCode (coming from auth guard -> DB) to find the agent's appointments.
     const or: Record<string, string>[] = [];
 
     if (referralCode) {
       or.push(
         { referralCode },
         { agentId: referralCode },
-        // backwards-compat with older DB field naming
         { agentid: referralCode },
       );
     }
 
-    // Fallback: if caller only has agentId, try matching legacy fields too
     if (!referralCode && agentId) {
       or.push({ agentId }, { agentid: agentId });
     }
 
     const filter = or.length ? { $or: or } : {};
 
-    return this.appointmentModel
+    const appointments = await this.appointmentModel
       .find(filter)
       .sort({ date: 1, slotStartTime: 1 })
       .lean()
       .exec();
+
+    // NEW LOGIC STARTS HERE
+
+    const userIds = appointments.map((a) => a.userId);
+
+    // get users
+    const users = await this.userModel
+      .find({ _id: { $in: userIds } })
+      .select("fullName email")
+      .lean();
+
+    const userMap = new Map(
+      users.map((u) => [u._id.toString(), u]),
+    );
+
+    // get product counts
+    const productCounts = await this.ProductModel.aggregate([
+      {
+        $match: {
+          userId: { $in: userIds },
+        },
+      },
+      {
+        $group: {
+          _id: "$userId",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+  
+    // merge everything
+    const result = appointments.map((appt) => {
+      const user = userMap.get(appt.userId.toString());
+
+      return {
+        ...appt,
+        userName: user?.fullName || "",
+        email: user?.email || "",
+        productCount: appt.productIds?.length || 0,
+      };
+    });
+
+    return result;
   }
 
   async getAppointmentsById(appointmentid: string) {
