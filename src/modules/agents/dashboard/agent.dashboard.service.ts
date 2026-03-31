@@ -29,7 +29,7 @@ export class AgentDashboardService {
     // Add search condition
     if (search) {
       filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
+        { fullName: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
       ];
     }
