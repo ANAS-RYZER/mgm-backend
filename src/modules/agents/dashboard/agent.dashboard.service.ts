@@ -32,6 +32,26 @@ export class AgentDashboardService {
       customers: customers,
     };
   }
+
+  async getCustomerCountByAgentId(agentId: string) {
+    const agent = await this.agentProfileModel.findOne({ _id: agentId });
+
+    if (!agent) {
+      throw new NotFoundException('Agent not found');
+    }
+
+    const refId = agent.referralCode?.toString();
+
+    // COUNT ONLY
+    const count = await this.userModel.countDocuments({
+      refId: refId,
+    });
+
+    return {
+      totalCustomers: count,
+    };
+  }
+
   async getAgent(agentId: string) {
     const agent = await this.agentProfileModel.findOne({ _id: agentId }).select('agentId name email phoneNumber dob ');
     if (!agent) {

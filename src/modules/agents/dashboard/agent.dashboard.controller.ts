@@ -14,12 +14,22 @@ export class AgentDashboardController {
     return customers;
   }
 
+  @Get('customer-count')
+  @UseGuards(AgentJwtAuthGuard)
+  async getCustomerCount(@Req() req: Request) {
+    const agentId = req['agent'].agentId;
+
+    return this.agentDashboardService.getCustomerCountByAgentId(agentId);
+  }
+
   @Get('user/:id')
   @UseGuards(AgentJwtAuthGuard)
   async getUserById(@Param('id') userId: string, @Req() req: Request) {
     const agentId = req['agent'].agentId;
     return this.agentDashboardService.getCustomerById(agentId, userId);
   }
+
+
 
   @Get('user/:id/appointments')
   @UseGuards(AgentJwtAuthGuard)

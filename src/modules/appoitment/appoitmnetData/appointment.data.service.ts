@@ -17,6 +17,8 @@ import {
   ProductDocument,
 } from "src/modules/products/schemas/product.schema";
 import { AppointmentStatus } from "../dto/appoitment.dto";
+import { Types } from 'mongoose';
+import {Console} from "console";
 
 @Injectable()
 export class AppoitmenDatatService {
@@ -161,7 +163,12 @@ export class AppoitmenDatatService {
     };
   }
 
-  async getAgentAppointments(agentId: string, referralCode: string) {
+  async getAgentAppointments(
+    agentId: string,
+    referralCode: string,
+    search?: string,
+    status?: string,
+  ) {
     const or: Record<string, string>[] = [];
 
     if (referralCode) {
@@ -183,8 +190,6 @@ export class AppoitmenDatatService {
       .sort({ date: 1, slotStartTime: 1 })
       .lean()
       .exec();
-
-    // NEW LOGIC STARTS HERE
 
     const userIds = appointments.map((a) => a.userId);
 
@@ -213,22 +218,229 @@ export class AppoitmenDatatService {
       },
     ]);
 
-  
+    //FIX: use aggregated product count
+    const productMap = new Map(
+      productCounts.map((p) => [p._id.toString(), p.count]),
+    );
+
     // merge everything
-    const result = appointments.map((appt) => {
+    let result = appointments.map((appt) => {
       const user = userMap.get(appt.userId.toString());
 
       return {
         ...appt,
         userName: user?.fullName || "",
         email: user?.email || "",
-        productCount: appt.productIds?.length || 0,
+        productCount: productMap.get(appt.userId.toString()) || 0,
       };
     });
+
+    // SEARCH (name + email + status)
+    if (search) {
+      const searchLower = search.toLowerCase();
+
+      result = result.filter((item) =>
+        item.userName?.toLowerCase().includes(searchLower) ||
+        item.email?.toLowerCase().includes(searchLower) ||
+        item.status?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // STATUS FILTER (exact match optional)
+    if (status) {
+      result = result.filter(
+        (item) => item.status?.toLowerCase() === status.toLowerCase()
+      );
+    }
 
     return result;
   }
 
+  async getAppointmentDetails(
+    appointmentId: string,
+    agentId: string,
+    referralCode: string,
+  ) {
+    if (!Types.ObjectId.isValid(appointmentId)) {
+      throw new NotFoundException('Invalid Appointment ID');
+    }
+
+    const identifier = referralCode || agentId;
+
+    const result = await this.appointmentModel.aggregate([
+      {
+        $match: {
+          _id: new Types.ObjectId(appointmentId),
+          ...(identifier && {
+            $or: [
+              { referralCode: identifier },
+              { agentId: identifier },
+              { agentid: identifier },
+            ],
+          }),
+        },
+      },
+
+      // ✅ USER FIX
+      {
+        $addFields: {
+          userObjectId: { $toObjectId: '$userId' },
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userObjectId',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+
+      // ✅ FINAL PRODUCT FIX (100% WORKING)
+      {
+        $lookup: {
+          from: 'products', // ⚠️ verify name
+          let: {
+            productIds: {
+              $map: {
+                input: '$productIds',
+                as: 'pid',
+                in: { $trim: { input: '$$pid' } }
+              }
+            }
+          },
+          pipeline: [
+            {
+              $addFields: {
+                stringId: { $toString: '$_id' }
+              }
+            },
+            {
+              $match: {
+                $expr: {
+                  $in: ['$stringId', '$$productIds']
+                }
+              }
+            }
+          ],
+          as: 'products'
+        }
+      },
+
+      {
+        $project: {
+          _id: 0,
+          appointmentId: '$_id',
+          date: 1,
+          time: {
+            $concat: ['$slotStartTime', ' - ', '$slotEndTime'],
+          },
+          status: 1,
+
+          customerId: '$user._id',
+          customerName: '$user.fullName',
+          email: '$user.email',
+
+          numberOfProducts: { $size: '$products' },
+          products: {
+            $map: {
+              input: '$products',
+              as: 'p',
+              in: {
+                productId: '$$p._id',
+                name: '$$p.name',
+                price: '$$p.mrpPrice',
+              },
+            },
+          },
+        },
+      },
+    ]);
+
+    console.log('🔥 RESULT:', JSON.stringify(result, null, 2));
+
+    if (!result.length) {
+      throw new NotFoundException(
+        'Appointment not found or unauthorized',
+      );
+    }
+
+    return result[0];
+  }
+
+  async getAppointmentCounts(
+    agentId: string,
+    referralCode: string,
+  ) {
+    const identifier = referralCode || agentId;
+
+    const matchCondition: any = {};
+
+    if (identifier) {
+      matchCondition.$or = [
+        { referralCode: identifier },
+        { agentId: identifier },
+        { agentid: identifier },
+      ];
+    }
+
+    const result = await this.appointmentModel.aggregate([
+      {
+        $match: matchCondition,
+      },
+      {
+        $group: {
+          _id: null,
+
+          total: { $sum: 1 },
+
+          confirmed: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'CONFIRMED'] }, 1, 0],
+            },
+          },
+
+          isPurchased: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'ISPURCHASED'] }, 1, 0],
+            },
+          },
+
+          isVisited: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'ISVISITED'] }, 1, 0],
+            },
+          },
+
+          notVisited: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'NOTVISITED'] }, 1, 0],
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          total: 1,
+          confirmed: 1,
+          isPurchased: 1,
+          isVisited: 1,
+          notVisited: 1,
+        },
+      },
+    ]);
+
+    return result[0] || {
+      total: 0,
+      confirmed: 0,
+      isPurchased: 0,
+      isVisited: 0,
+      notVisited: 0,
+    };
+  }
+  
   async getAppointmentsById(appointmentid: string) {
     const appointment = await this.appointmentModel
       .findById(appointmentid)
