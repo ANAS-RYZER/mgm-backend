@@ -64,15 +64,18 @@ export class OrderService {
       throw new BadRequestException("Failed to create order");
     }
 
-    await this.appointmentModel.findByIdAndUpdate(appointmentId, {
-      status: AppointmentStatus.ISPURCHASED,
-    }, { new: true });
+    await this.appointmentModel.findByIdAndUpdate(
+      appointmentId,
+      {
+        status: AppointmentStatus.ISPURCHASED,
+      },
+      { new: true },
+    );
 
     return {
       orderId: order._id,
       status: order.status,
       appointmentId: order.appointmentId,
-     
     };
   }
 
@@ -200,114 +203,143 @@ export class OrderService {
 
   async getAllOrders(search?: string, page = 1, limit = 10) {
     const skip = (page - 1) * limit;
-    let orderFilter: any = {};
+    const pipeline: any[] = [];
 
-    // SEARCH LOGIC
-    if (search?.trim()) {
-      const regex = new RegExp(search.trim(), "i");
+    const regex = search?.trim() ? new RegExp(search.trim(), "i") : null;
 
-      // find matching users
-      const users = await this.userModel
-        .find({
-          $or: [{ username: regex }, { email: regex }],
-        })
-        .select("_id")
-        .lean();
+    pipeline.push(
+      {
+        $lookup: {
+          from: this.userModel.collection.name,
+          let: { userId: "$userId" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$_id", { $toObjectId: "$$userId" }],
+                },
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+                username: 1,
+                email: 1,
+                fullName: 1,
+              },
+            },
+          ],
+          as: "user",
+        },
+      },
+      {
+        $unwind: {
+          path: "$user",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+    );
 
-      const userIds = users.map((u) => u._id);
-
-      // find matching products
-      const products = await this.productModel
-        .find({
-          $or: [{ name: regex }, { sku: regex }],
-        })
-        .select("sku")
-        .lean();
-
-      const skus = products.map((p) => p.sku);
-
-      // build order filter
-      orderFilter.$or = [
-        { userId: { $in: userIds } },
-        { productSku: { $in: skus } },
-      ];
-    }
-
-    // fetch orders + count together
-    const [orders, totalCount] = await Promise.all([
-      this.orderModel
-        .find(orderFilter)
-        .populate({
-          path: "userId",
-          model: "User",
-          select: "username email",
-        })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-
-      this.orderModel.countDocuments(orderFilter),
-    ]);
-
-    if (!orders.length) {
-      return {
-        orders: [],
-        page,
-        limit,
-        currentPage: page,
-        hasNextPage: false,
-        hasPreviousPage: false,
-        totalCount,
-        totalPages: 0,
-      };
-    }
-
-    // collect SKUs
-    const allSkus = orders.flatMap((o) => o.productSku || []);
-
-    // fetch product names
-    const products = await this.productModel
-      .find({ sku: { $in: allSkus } })
-      .select("sku name")
-      .lean();
-
-    const productMap = {};
-    products.forEach((p) => {
-      productMap[p.sku] = p.name;
+    pipeline.push({
+      $lookup: {
+        from: "products",
+        localField: "productSku",
+        foreignField: "sku",
+        as: "products",
+      },
     });
 
-    //  format response
-    const formattedOrders = orders.map((order) => ({
-      _id: order._id,
-      appointmentId: order.appointmentId,
-      totalPrice: order.totalPrice,
-      status: order.status,
+    pipeline.push({
+      $lookup: {
+        from: "agentprofiles",
+        localField: "agentId",
+        foreignField: "agentId",
+        as: "partner",
+      },
+    });
 
-      user: order.userId
-        ? {
-            id: (order.userId as any)._id,
-            username: (order.userId as any).username,
-            email: (order.userId as any).email,
-          }
-        : null,
+    pipeline.push({
+      $unwind: { path: "$partner", preserveNullAndEmptyArrays: true },
+    });
 
-      products: (order.productSku || []).map((sku) => ({
-        sku,
-        name: productMap[sku] || null,
-      })),
-    }));
+    if (regex) {
+      pipeline.push({
+        $match: {
+          $or: [
+            { "user.fullName": regex },
+            { "user.email": regex },
+            { "products.name": regex },
+            { "products.sku": regex },
+            { "partner.name": regex },
+            { "partner.agentId": regex },
+          ],
+        },
+      });
+    }
 
+    pipeline.push({
+      $project: {
+        _id: 1,
+        createdAt: 1,
+        status: 1,
+
+        user: {
+          id: "$user._id",
+          fullName: {
+            $ifNull: ["$user.fullName", "$user.username"],
+          },
+        },
+
+        partner: {
+          name: "$partner.name",
+          agentId: "$partner.agentId",
+        },
+
+        products: {
+          $map: {
+            input: "$products",
+            as: "p",
+            in: {
+              name: "$$p.name",
+              sku: "$$p.sku",
+            },
+          },
+        },
+
+        amount: "$totalPrice",
+
+        partnerCommission: "$breakdown.commission",
+      },
+    });
+
+    pipeline.push({
+      $facet: {
+        orders: [
+          { $sort: { createdAt: -1 } }, // latest first
+          { $skip: skip },
+          { $limit: limit },
+        ],
+        totalCount: [{ $count: "count" }],
+      },
+    });
+
+    const result = await this.orderModel.aggregate(pipeline);
+
+    const orders = result[0]?.orders || [];
+    const totalCount = result[0]?.totalCount[0]?.count || 0;
     const totalPages = Math.ceil(totalCount / limit);
 
     return {
-      orders: formattedOrders,
-      page,
-      limit,
-      currentPage: page,
-      hasNextPage: page < totalPages,
-      hasPreviousPage: page > 1,
-      totalCount,
-      totalPages,
+      orders,
+      pagination: {
+        page,
+        limit,
+        currentPage: page,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+        totalCount,
+        totalPages,
+      },
     };
   }
 }
