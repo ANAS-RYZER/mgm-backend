@@ -18,30 +18,47 @@ export class AgentDashboardService {
  @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
 @InjectModel(Appointment.name) private appointmentModel: Model<AppointmentDocument>) {}
 
-  async getCustomersByAgentId(agentId: string, search?: string) {
+  async getCustomersByAgentId(
+    agentId: string,
+    search?: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
     const agent = await this.agentProfileModel.findOne({ _id: agentId });
     if (!agent) {
       throw new NotFoundException('Agent not found');
     }
+
     const refId = agent.referralCode?.toString();
-    // Base filter
+
     const filter: any = {
       refId: refId,
     };
-    // Add search condition
+
     if (search) {
       filter.$or = [
         { fullName: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
       ];
     }
+
     const customers = await this.userModel
       .find(filter)
       .select('-password -isEmailVerified -createdAt -updatedAt')
       .lean();
 
+    // PAGINATION (only added this part)
+    const total = customers.length;
+    const skip = (page - 1) * limit;
+
+    const paginatedCustomers = customers.slice(skip, skip + limit);
+
     return {
-      customers,
+      customers: paginatedCustomers,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
     };
   }
 
