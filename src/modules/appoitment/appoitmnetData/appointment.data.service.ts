@@ -17,8 +17,8 @@ import {
   ProductDocument,
 } from "src/modules/products/schemas/product.schema";
 import { AppointmentStatus } from "../dto/appoitment.dto";
-import { Types } from 'mongoose';
-import {Console} from "console";
+import { Types } from "mongoose";
+import { Console } from "console";
 
 @Injectable()
 export class AppoitmenDatatService {
@@ -32,14 +32,9 @@ export class AppoitmenDatatService {
     @InjectModel(Product.name)
     private readonly ProductModel: Model<ProductDocument>,
     @InjectModel(User.name)
-    private readonly userModel : Model<UserDocument>,
-
+    private readonly userModel: Model<UserDocument>,
   ) {}
-  async getAdminAppointment(
-    search?: string,
-    page = 1,
-    limit = 10,
-  ) {
+  async getAdminAppointment(search?: string, page = 1, limit = 10) {
     const skip = (page - 1) * limit;
 
     const adminAppointmentPipeline: PipelineStage[] = [
@@ -118,10 +113,7 @@ export class AppoitmenDatatService {
       {
         $facet: {
           // PAGINATED DATA
-          appointments: [
-            { $skip: skip },
-            { $limit: limit },
-          ],
+          appointments: [{ $skip: skip }, { $limit: limit }],
 
           // TOTAL COUNT
           totalAppointments: [{ $count: "count" }],
@@ -151,15 +143,19 @@ export class AppoitmenDatatService {
       },
     ];
 
-    const result = await this.appointmentModel.aggregate(adminAppointmentPipeline);
+    const result = await this.appointmentModel.aggregate(
+      adminAppointmentPipeline,
+    );
 
     return {
       ...result[0],
-      page,
-      limit,
-      hasNextPage: skip + limit < result[0].totalAppointments,
-      hasPreviousPage: page > 1,
-      totalPages: Math.ceil(result[0].totalAppointments / limit),
+      pagination: {
+        page,
+        limit,
+        hasNextPage: skip + limit < result[0].totalAppointments,
+        hasPreviousPage: page > 1,
+        totalPages: Math.ceil(result[0].totalAppointments / limit),
+      },
     };
   }
 
@@ -199,13 +195,10 @@ export class AppoitmenDatatService {
       .select("fullName email")
       .lean();
 
-    const userMap = new Map(
-      users.map((u) => [u._id.toString(), u]),
-    );
-
+    const userMap = new Map(users.map((u) => [u._id.toString(), u]));
 
     const allProductIds = appointments.flatMap((a) =>
-      (a.productIds || []).map((id) => new Types.ObjectId(id))
+      (a.productIds || []).map((id) => new Types.ObjectId(id)),
     );
 
     //NEW: fetch valid products
@@ -216,9 +209,7 @@ export class AppoitmenDatatService {
       .lean();
 
     // NEW: create Set for fast lookup
-    const validProductSet = new Set(
-      products.map((p) => p._id.toString())
-    );
+    const validProductSet = new Set(products.map((p) => p._id.toString()));
 
     // merge everything
     let result = appointments.map((appt) => {
@@ -231,9 +222,8 @@ export class AppoitmenDatatService {
 
         // FIXED productCount
         productCount:
-          appt.productIds?.filter((id) =>
-            validProductSet.has(id.toString())
-          ).length || 0,
+          appt.productIds?.filter((id) => validProductSet.has(id.toString()))
+            .length || 0,
       };
     });
 
@@ -241,18 +231,18 @@ export class AppoitmenDatatService {
     if (search) {
       const searchLower = search.toLowerCase();
 
-      result = result.filter((item) =>
-        item.userName?.toLowerCase().includes(searchLower) ||
-        item.email?.toLowerCase().includes(searchLower) ||
-        item.status?.toLowerCase().includes(searchLower)
+      result = result.filter(
+        (item) =>
+          item.userName?.toLowerCase().includes(searchLower) ||
+          item.email?.toLowerCase().includes(searchLower) ||
+          item.status?.toLowerCase().includes(searchLower),
       );
     }
 
     // STATUS FILTER
     if (status) {
       result = result.filter(
-        (item) =>
-          item.status?.toLowerCase() === status.toLowerCase()
+        (item) => item.status?.toLowerCase() === status.toLowerCase(),
       );
     }
 
@@ -265,7 +255,7 @@ export class AppoitmenDatatService {
     referralCode: string,
   ) {
     if (!Types.ObjectId.isValid(appointmentId)) {
-      throw new NotFoundException('Invalid Appointment ID');
+      throw new NotFoundException("Invalid Appointment ID");
     }
 
     const identifier = referralCode || agentId;
@@ -287,20 +277,20 @@ export class AppoitmenDatatService {
       // USER
       {
         $addFields: {
-          userObjectId: { $toObjectId: '$userId' },
+          userObjectId: { $toObjectId: "$userId" },
         },
       },
       {
         $lookup: {
-          from: 'users',
-          localField: 'userObjectId',
-          foreignField: '_id',
-          as: 'user',
+          from: "users",
+          localField: "userObjectId",
+          foreignField: "_id",
+          as: "user",
         },
       },
       {
         $unwind: {
-          path: '$user',
+          path: "$user",
           preserveNullAndEmptyArrays: true,
         },
       },
@@ -310,9 +300,9 @@ export class AppoitmenDatatService {
         $addFields: {
           productObjectIds: {
             $map: {
-              input: { $ifNull: ['$productIds', []] },
-              as: 'pid',
-              in: { $toObjectId: '$$pid' },
+              input: { $ifNull: ["$productIds", []] },
+              as: "pid",
+              in: { $toObjectId: "$$pid" },
             },
           },
         },
@@ -321,10 +311,10 @@ export class AppoitmenDatatService {
       // FETCH PRODUCTS (correct way)
       {
         $lookup: {
-          from: 'products', // make sure collection name is correct
-          localField: 'productObjectIds',
-          foreignField: '_id',
-          as: 'products',
+          from: "products", // make sure collection name is correct
+          localField: "productObjectIds",
+          foreignField: "_id",
+          as: "products",
         },
       },
 
@@ -332,28 +322,28 @@ export class AppoitmenDatatService {
       {
         $project: {
           _id: 0,
-          appointmentId: '$_id',
+          appointmentId: "$_id",
           date: 1,
           time: {
-            $concat: ['$slotStartTime', ' - ', '$slotEndTime'],
+            $concat: ["$slotStartTime", " - ", "$slotEndTime"],
           },
           status: 1,
 
-          customerId: '$user._id',
-          customerName: '$user.fullName',
-          email: '$user.email',
+          customerId: "$user._id",
+          customerName: "$user.fullName",
+          email: "$user.email",
 
-          numberOfProducts: { $size: '$products' },
+          numberOfProducts: { $size: "$products" },
 
           products: {
             $map: {
-              input: '$products',
-              as: 'p',
+              input: "$products",
+              as: "p",
               in: {
-                productId: '$$p._id',
-                name: '$$p.name',
-                categories:'$$p.categories',
-                price: '$$p.mrpPrice',
+                productId: "$$p._id",
+                name: "$$p.name",
+                categories: "$$p.categories",
+                price: "$$p.mrpPrice",
               },
             },
           },
@@ -362,18 +352,13 @@ export class AppoitmenDatatService {
     ]);
 
     if (!result.length) {
-      throw new NotFoundException(
-        'Appointment not found or unauthorized',
-      );
+      throw new NotFoundException("Appointment not found or unauthorized");
     }
 
     return result[0];
   }
 
-  async getAppointmentCounts(
-    agentId: string,
-    referralCode: string,
-  ) {
+  async getAppointmentCounts(agentId: string, referralCode: string) {
     const identifier = referralCode || agentId;
 
     const matchCondition: any = {};
@@ -398,25 +383,25 @@ export class AppoitmenDatatService {
 
           confirmed: {
             $sum: {
-              $cond: [{ $eq: ['$status', 'CONFIRMED'] }, 1, 0],
+              $cond: [{ $eq: ["$status", "CONFIRMED"] }, 1, 0],
             },
           },
 
           isPurchased: {
             $sum: {
-              $cond: [{ $eq: ['$status', 'ISPURCHASED'] }, 1, 0],
+              $cond: [{ $eq: ["$status", "ISPURCHASED"] }, 1, 0],
             },
           },
 
           isVisited: {
             $sum: {
-              $cond: [{ $eq: ['$status', 'ISVISITED'] }, 1, 0],
+              $cond: [{ $eq: ["$status", "ISVISITED"] }, 1, 0],
             },
           },
 
           notVisited: {
             $sum: {
-              $cond: [{ $eq: ['$status', 'NOTVISITED'] }, 1, 0],
+              $cond: [{ $eq: ["$status", "NOTVISITED"] }, 1, 0],
             },
           },
         },
@@ -433,15 +418,17 @@ export class AppoitmenDatatService {
       },
     ]);
 
-    return result[0] || {
-      total: 0,
-      confirmed: 0,
-      isPurchased: 0,
-      isVisited: 0,
-      notVisited: 0,
-    };
+    return (
+      result[0] || {
+        total: 0,
+        confirmed: 0,
+        isPurchased: 0,
+        isVisited: 0,
+        notVisited: 0,
+      }
+    );
   }
-  
+
   async getAppointmentsById(appointmentid: string) {
     const appointment = await this.appointmentModel
       .findById(appointmentid)
@@ -456,7 +443,7 @@ export class AppoitmenDatatService {
       appointment?.agentId ||
       appointment?.agentid ||
       "";
-      console.log("RefId for agent lookup:", refId);
+    console.log("RefId for agent lookup:", refId);
 
     const [user, agent, products] = await Promise.all([
       this.UserModel.findById(appointment.userId)
@@ -470,7 +457,9 @@ export class AppoitmenDatatService {
       this.ProductModel.find({
         _id: { $in: appointment.productIds || [] },
       })
-        .select("name sku mrpPrice goldSpecs stoneSpecs image makingChanges cgst netprice grossPrice discountedPrice discountedPercentage sgst va")
+        .select(
+          "name sku mrpPrice goldSpecs stoneSpecs image makingChanges cgst netprice grossPrice discountedPrice discountedPercentage sgst va",
+        )
         .lean(),
     ]);
     console.log({ user, agent, products });
@@ -526,6 +515,4 @@ export class AppoitmenDatatService {
 
     return appointment;
   }
-
-
 }
