@@ -61,6 +61,27 @@ export class AgentDashboardController {
       data,
     };
   }
+  
+  @Get('customer/:customerId/orders')
+  @UseGuards(AgentJwtAuthGuard)
+  async getCustomerOrders(
+    @Param('customerId') customerId: string,
+    @Req() req: Request,
+  ) {
+    const agentId = req['agent'].agentId;
+
+    const data =
+      await this.agentDashboardService.getCustomerOrders(
+        customerId,
+        agentId,
+      );
+
+    return {
+      success: true,
+      count: data.length,
+      data,
+    };
+  }
 
   @Get('customer-count')
   @UseGuards(AgentJwtAuthGuard)

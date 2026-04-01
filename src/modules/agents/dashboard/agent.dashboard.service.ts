@@ -8,6 +8,8 @@ import {  User, UserDocument } from "src/modules/users/schemas/user.schema";
 import { Product, ProductDocument } from "src/modules/products/schemas/product.schema";
 import { Order, OrderDocument } from "src/modules/order/schema/order.schema";
 import { Appointment, AppointmentDocument } from "src/modules/appoitment/schema/appointment.schema";
+
+
 @Injectable()
 export class AgentDashboardService {
   constructor(@InjectModel(AgentProfile.name) private agentProfileModel: Model<AgentProfileDocument>
@@ -140,6 +142,89 @@ export class AgentDashboardService {
       numberOfOrders: appt.productIds?.length || 0, 
       status: appt.status,
     }));
+  }
+
+  async getCustomerOrders(customerId: string, agentId: string) {
+    if (!Types.ObjectId.isValid(customerId)) {
+      throw new NotFoundException('Invalid Customer ID');
+    }
+
+    const agent = await this.agentProfileModel.findById(agentId);
+    if (!agent) {
+      throw new NotFoundException('Agent not found');
+    }
+
+    const agentCode = agent.referralCode?.toString();
+
+    const orders = await this.orderModel
+      .find({
+        $and: [
+          {
+            $or: [
+              { userId: new Types.ObjectId(customerId) },
+              { userId: customerId },
+            ],
+          },
+          {
+            $or: [{ agentId: agentCode }, { agentId: agentId }],
+          },
+        ],
+      })
+      .lean();
+
+    if (!orders.length) return [];
+
+    // ✅ Appointments
+    const appointmentIds = orders.map((o) => o.appointmentId);
+
+    const appointments = await this.appointmentModel
+      .find({ _id: { $in: appointmentIds } })
+      .lean();
+
+    const appointmentMap = new Map(
+      appointments.map((a) => [a._id.toString(), a]),
+    );
+
+    // ✅ Get SKUs
+    const allSkus = orders.flatMap((o) => o.productSku || []);
+    console.log("ORDER SKUS:", allSkus);
+
+    // ✅ ONLY sku FIELD
+    const products = await this.productModel
+      .find({ sku: { $in: allSkus } })
+      .lean();
+
+    console.log("PRODUCTS FOUND:", products);
+
+    const productMap = new Map(
+      products.map((p) => [p.sku, p]),
+    );
+
+    const purchasedProducts: any[] = [];
+
+    for (const order of orders) {
+      const appt = appointmentMap.get(
+        order.appointmentId?.toString(),
+      );
+
+      const totalProducts = order.productSku?.length || 1;
+
+      for (const sku of order.productSku || []) {
+        const product = productMap.get(sku);
+
+        console.log("MATCH CHECK:", sku, "=>", product);
+
+        purchasedProducts.push({
+          productType: product?.categories || null,
+          productName: product?.name ||  null,
+          appointmentDate: appt?.date || '',
+          productPrice:
+            (order.breakdown?.grandTotal || 0) / totalProducts,
+        });
+      }
+    }
+
+    return purchasedProducts;
   }
 
   async getCustomerCountByAgentId(agentId: string) {

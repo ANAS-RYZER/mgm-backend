@@ -65,11 +65,16 @@ export class OrderController {
   // get all orders
   @Get()
   @UseGuards(AdminJwtAuthGuard)
-  getAllOrders(
+  async getAllOrders(
     @Query("search") search?: string,
     @Query("page") page = "1",
     @Query("limit") limit = "10",
   ) {
-    return this.orderService.getAllOrders(search, Number(page), Number(limit));
+    const orders =  await this.orderService.getAllOrders(search, Number(page), Number(limit));
+    return {
+      success: true,
+      message: "Orders fetched successfully",
+      data: orders,
+    };
   }
 }
