@@ -341,7 +341,6 @@ export class AppoitmenDatatService {
 
           customerId: '$user._id',
           customerName: '$user.fullName',
-          customerRefId: '$user.refId',
           email: '$user.email',
 
           numberOfProducts: { $size: '$products' },
@@ -353,6 +352,7 @@ export class AppoitmenDatatService {
               in: {
                 productId: '$$p._id',
                 name: '$$p.name',
+                categories:'$$p.categories',
                 price: '$$p.mrpPrice',
               },
             },
