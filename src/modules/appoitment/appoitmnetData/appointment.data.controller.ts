@@ -42,6 +42,8 @@ export class AppoitmentDataController {
     @Req() req: Request,
     @Query("search") search?: string,
     @Query("status") status?: string,
+    @Query("page") page: number = 1,
+    @Query("limit") limit: number = 10,
   ) {
     const agentId = (req as any).agent?.agentId ?? "";
     const agentReferralCode = (req as any).agentReferralCode ?? "";
@@ -51,9 +53,11 @@ export class AppoitmentDataController {
       agentReferralCode,
       search,
       status,
+      Number(page),
+      Number(limit),
     );
 
-    return { data };
+    return data;
   }
 
   @Get('agentappointmentdetails/:id')

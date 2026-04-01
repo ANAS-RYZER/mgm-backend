@@ -164,6 +164,8 @@ export class AppoitmenDatatService {
     referralCode: string,
     search?: string,
     status?: string,
+    page: number = 1,
+    limit: number = 10,
   ) {
     const or: Record<string, string>[] = [];
 
@@ -195,23 +197,25 @@ export class AppoitmenDatatService {
       .select("fullName email")
       .lean();
 
-    const userMap = new Map(users.map((u) => [u._id.toString(), u]));
+    const userMap = new Map(
+      users.map((u) => [u._id.toString(), u]),
+    );
 
     const allProductIds = appointments.flatMap((a) =>
       (a.productIds || []).map((id) => new Types.ObjectId(id)),
     );
 
-    //NEW: fetch valid products
+    // fetch valid products
     const products = await this.ProductModel.find({
       _id: { $in: allProductIds },
     })
       .select("_id")
       .lean();
 
-    // NEW: create Set for fast lookup
-    const validProductSet = new Set(products.map((p) => p._id.toString()));
+    const validProductSet = new Set(
+      products.map((p) => p._id.toString())
+    );
 
-    // merge everything
     let result = appointments.map((appt) => {
       const user = userMap.get(appt.userId.toString());
 
@@ -219,15 +223,13 @@ export class AppoitmenDatatService {
         ...appt,
         userName: user?.fullName || "",
         email: user?.email || "",
-
-        // FIXED productCount
         productCount:
           appt.productIds?.filter((id) => validProductSet.has(id.toString()))
             .length || 0,
       };
     });
 
-    // SEARCH (name + email + status)
+    // SEARCH
     if (search) {
       const searchLower = search.toLowerCase();
 
@@ -246,7 +248,19 @@ export class AppoitmenDatatService {
       );
     }
 
-    return result;
+    //  PAGINATION (ADDED ONLY THIS PART)
+    const total = result.length;
+    const skip = (page - 1) * limit;
+
+    const paginatedData = result.slice(skip, skip + limit);
+
+    return {
+      data: paginatedData,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async getAppointmentDetails(
