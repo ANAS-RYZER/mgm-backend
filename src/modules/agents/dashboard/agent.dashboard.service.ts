@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from "@nestjs/common";
 import { AgentService } from "../agent.service";
-import { Model } from "mongoose";
+import { Model, Types } from "mongoose";
 import { AgentDocument } from "../schemas/agent.schema";
 import { InjectModel } from "@nestjs/mongoose";
 import {  AgentProfile, AgentProfileDocument } from "../schemas/agent.profile.schema";
@@ -41,6 +41,105 @@ export class AgentDashboardService {
     return {
       customers,
     };
+  }
+
+  async getCustomerDetails(
+    customerId: string,
+    agentId: string,
+  ) {
+    if (!Types.ObjectId.isValid(customerId)) {
+      throw new NotFoundException('Invalid Customer ID');
+    }
+
+    // Step 1: validate agent
+    const agent = await this.agentProfileModel.findOne({ _id: agentId });
+
+    if (!agent) {
+      throw new NotFoundException('Agent not found');
+    }
+
+    const refId = agent.referralCode?.toString();
+
+    if (!refId) {
+      throw new NotFoundException('Agent referral code not found');
+    }
+
+    // Step 2: get customer (IMPORTANT: match refId also)
+    const user = await this.userModel
+      .findOne({
+        _id: customerId,
+        refId: refId, // ensures this customer belongs to agent
+      })
+      .select('_id fullName email createdAt ')
+      .lean();
+
+    if (!user) {
+      throw new NotFoundException(
+        'Customer not found or not linked to this agent',
+      );
+    }
+
+    //  Step 3: response
+    return {
+      customerId: user._id.toString(),
+      name: user.fullName,
+      email: user.email,
+      createdDate: user.createdAt,
+      referralCode: user.refId,
+      avatar: user.avatar,
+    };
+  }
+
+  async getCustomerAppointments(
+    customerId: string,
+    agentId: string,
+  ) {
+    if (!Types.ObjectId.isValid(customerId)) {
+      throw new NotFoundException('Invalid Customer ID');
+    }
+
+    // Step 1: validate agent
+    const agent = await this.agentProfileModel.findById(agentId);
+
+    if (!agent) {
+      throw new NotFoundException('Agent not found');
+    }
+
+    const refId = agent.referralCode?.toString();
+
+    // Step 2: get customer
+    const user = await this.userModel
+      .findById(customerId)
+      .select('fullName email')
+      .lean();
+
+    if (!user) {
+      throw new NotFoundException('Customer not found');
+    }
+
+    // Step 3: get appointments (agent + customer)
+    const appointments = await this.appointmentModel
+      .find({
+        userId: customerId,
+        $or: [
+          { referralCode: refId },
+          { agentId: refId },
+          { agentid: refId },
+        ],
+      })
+      .sort({ date: -1 })
+      .lean();
+
+    // Step 4: format response
+    return appointments.map((appt) => ({
+      appointmentId: appt._id,
+      customerName: user.fullName,
+      email: user.email,
+      date: appt.date,
+      slot: `${appt.slotStartTime} - ${appt.slotEndTime}`,
+      numberOfOrders: appt.productIds?.length || 0, 
+      status: appt.status,
+    }));
   }
 
   async getCustomerCountByAgentId(agentId: string) {

@@ -28,6 +28,10 @@ export class User {
     default: 'https://ryzer-v2.s3.ap-south-1.amazonaws.com/users/681c506bd81904bc923c7757/094fd3a1-3729-4f71-ad9f-86a74b1066be.png' 
   })
   avatar: string;
+
+  createdAt?: Date;
+  
+  updatedAt?: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
