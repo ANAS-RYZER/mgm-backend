@@ -203,24 +203,21 @@ export class AppoitmenDatatService {
       users.map((u) => [u._id.toString(), u]),
     );
 
-    // get product counts
-    const productCounts = await this.ProductModel.aggregate([
-      {
-        $match: {
-          userId: { $in: userIds },
-        },
-      },
-      {
-        $group: {
-          _id: "$userId",
-          count: { $sum: 1 },
-        },
-      },
-    ]);
 
-    //FIX: use aggregated product count
-    const productMap = new Map(
-      productCounts.map((p) => [p._id.toString(), p.count]),
+    const allProductIds = appointments.flatMap((a) =>
+      (a.productIds || []).map((id) => new Types.ObjectId(id))
+    );
+
+    //NEW: fetch valid products
+    const products = await this.ProductModel.find({
+      _id: { $in: allProductIds },
+    })
+      .select("_id")
+      .lean();
+
+    // NEW: create Set for fast lookup
+    const validProductSet = new Set(
+      products.map((p) => p._id.toString())
     );
 
     // merge everything
@@ -231,7 +228,12 @@ export class AppoitmenDatatService {
         ...appt,
         userName: user?.fullName || "",
         email: user?.email || "",
-        productCount: productMap.get(appt.userId.toString()) || 0,
+
+        // FIXED productCount
+        productCount:
+          appt.productIds?.filter((id) =>
+            validProductSet.has(id.toString())
+          ).length || 0,
       };
     });
 
@@ -246,10 +248,11 @@ export class AppoitmenDatatService {
       );
     }
 
-    // STATUS FILTER (exact match optional)
+    // STATUS FILTER
     if (status) {
       result = result.filter(
-        (item) => item.status?.toLowerCase() === status.toLowerCase()
+        (item) =>
+          item.status?.toLowerCase() === status.toLowerCase()
       );
     }
 
@@ -281,7 +284,7 @@ export class AppoitmenDatatService {
         },
       },
 
-      // ✅ USER FIX
+      // USER
       {
         $addFields: {
           userObjectId: { $toObjectId: '$userId' },
@@ -295,39 +298,37 @@ export class AppoitmenDatatService {
           as: 'user',
         },
       },
-      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
-
-      // ✅ FINAL PRODUCT FIX (100% WORKING)
       {
-        $lookup: {
-          from: 'products', // ⚠️ verify name
-          let: {
-            productIds: {
-              $map: {
-                input: '$productIds',
-                as: 'pid',
-                in: { $trim: { input: '$$pid' } }
-              }
-            }
-          },
-          pipeline: [
-            {
-              $addFields: {
-                stringId: { $toString: '$_id' }
-              }
-            },
-            {
-              $match: {
-                $expr: {
-                  $in: ['$stringId', '$$productIds']
-                }
-              }
-            }
-          ],
-          as: 'products'
-        }
+        $unwind: {
+          path: '$user',
+          preserveNullAndEmptyArrays: true,
+        },
       },
 
+      // FIX: convert productIds → ObjectId
+      {
+        $addFields: {
+          productObjectIds: {
+            $map: {
+              input: { $ifNull: ['$productIds', []] },
+              as: 'pid',
+              in: { $toObjectId: '$$pid' },
+            },
+          },
+        },
+      },
+
+      // FETCH PRODUCTS (correct way)
+      {
+        $lookup: {
+          from: 'products', // make sure collection name is correct
+          localField: 'productObjectIds',
+          foreignField: '_id',
+          as: 'products',
+        },
+      },
+
+      //  FINAL RESPONSE
       {
         $project: {
           _id: 0,
@@ -340,9 +341,11 @@ export class AppoitmenDatatService {
 
           customerId: '$user._id',
           customerName: '$user.fullName',
+          customerRefId: '$user.refId',
           email: '$user.email',
 
           numberOfProducts: { $size: '$products' },
+
           products: {
             $map: {
               input: '$products',
@@ -357,8 +360,6 @@ export class AppoitmenDatatService {
         },
       },
     ]);
-
-    console.log('🔥 RESULT:', JSON.stringify(result, null, 2));
 
     if (!result.length) {
       throw new NotFoundException(
