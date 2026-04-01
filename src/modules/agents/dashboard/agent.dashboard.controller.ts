@@ -23,6 +23,45 @@ export class AgentDashboardController {
     return customers;
   }
 
+  @Get('customer/:customerId')
+  @UseGuards(AgentJwtAuthGuard)
+  async getCustomerDetails(
+    @Param('customerId') customerId: string,
+    @Req() req: Request,
+  ) {
+    const agentId = req['agent'].agentId;
+
+    const data = await this.agentDashboardService.getCustomerDetails(
+      customerId,
+      agentId,
+    );
+
+    return {
+      success: true,
+      data,
+    };
+  }
+
+  @Get('customer/:customerId/appointments')
+  @UseGuards(AgentJwtAuthGuard)
+  async getCustomerAppointments(
+    @Param('customerId') customerId: string,
+    @Req() req: Request,
+  ) {
+    const agentId = req['agent'].agentId;
+
+    const data = await this.agentDashboardService.getCustomerAppointments(
+      customerId,
+      agentId,
+    );
+
+    return {
+      success: true,
+      count: data.length,
+      data,
+    };
+  }
+
   @Get('customer-count')
   @UseGuards(AgentJwtAuthGuard)
   async getCustomerCount(@Req() req: Request) {
