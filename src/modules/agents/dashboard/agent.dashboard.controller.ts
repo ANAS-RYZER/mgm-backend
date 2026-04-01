@@ -11,6 +11,8 @@ export class AgentDashboardController {
   async getCustomers(
     @Req() req: Request,
     @Query('search') search?: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
   ) {
     const agentId = req['agent'].agentId;
 
@@ -18,6 +20,8 @@ export class AgentDashboardController {
       await this.agentDashboardService.getCustomersByAgentId(
         agentId,
         search,
+        Number(page),
+        Number(limit),
       );
 
     return customers;
@@ -54,6 +58,27 @@ export class AgentDashboardController {
       customerId,
       agentId,
     );
+
+    return {
+      success: true,
+      count: data.length,
+      data,
+    };
+  }
+
+  @Get('customer/:customerId/orders')
+  @UseGuards(AgentJwtAuthGuard)
+  async getCustomerOrders(
+    @Param('customerId') customerId: string,
+    @Req() req: Request,
+  ) {
+    const agentId = req['agent'].agentId;
+
+    const data =
+      await this.agentDashboardService.getCustomerOrders(
+        customerId,
+        agentId,
+      );
 
     return {
       success: true,
