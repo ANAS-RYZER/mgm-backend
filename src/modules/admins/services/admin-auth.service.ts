@@ -28,6 +28,12 @@ const ADMIN_ACCOUNTS = [
     fullName: "MGM Admin",
     isEmailVerified: true,
   },
+  {
+    email: "mrunal@ryzer.app",
+    password: "123456789",
+    fullName: "Mrunal Admin",
+    isEmailVerified: true,
+  },
 ];
 
 @Injectable()
