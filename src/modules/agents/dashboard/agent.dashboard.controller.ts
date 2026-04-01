@@ -8,10 +8,66 @@ export class AgentDashboardController {
   constructor(private readonly agentDashboardService: AgentDashboardService) {}
   @Get('customers')
   @UseGuards(AgentJwtAuthGuard) 
-  async getCustomers(@Req() req: Request) {
+  async getCustomers(
+    @Req() req: Request,
+    @Query('search') search?: string,
+  ) {
     const agentId = req['agent'].agentId;
-    const customers = await this.agentDashboardService.getCustomersByAgentId(agentId);
+
+    const customers =
+      await this.agentDashboardService.getCustomersByAgentId(
+        agentId,
+        search,
+      );
+
     return customers;
+  }
+
+  @Get('customer/:customerId')
+  @UseGuards(AgentJwtAuthGuard)
+  async getCustomerDetails(
+    @Param('customerId') customerId: string,
+    @Req() req: Request,
+  ) {
+    const agentId = req['agent'].agentId;
+
+    const data = await this.agentDashboardService.getCustomerDetails(
+      customerId,
+      agentId,
+    );
+
+    return {
+      success: true,
+      data,
+    };
+  }
+
+  @Get('customer/:customerId/appointments')
+  @UseGuards(AgentJwtAuthGuard)
+  async getCustomerAppointments(
+    @Param('customerId') customerId: string,
+    @Req() req: Request,
+  ) {
+    const agentId = req['agent'].agentId;
+
+    const data = await this.agentDashboardService.getCustomerAppointments(
+      customerId,
+      agentId,
+    );
+
+    return {
+      success: true,
+      count: data.length,
+      data,
+    };
+  }
+
+  @Get('customer-count')
+  @UseGuards(AgentJwtAuthGuard)
+  async getCustomerCount(@Req() req: Request) {
+    const agentId = req['agent'].agentId;
+
+    return this.agentDashboardService.getCustomerCountByAgentId(agentId);
   }
 
   @Get('user/:id')
@@ -20,6 +76,8 @@ export class AgentDashboardController {
     const agentId = req['agent'].agentId;
     return this.agentDashboardService.getCustomerById(agentId, userId);
   }
+
+
 
   @Get('user/:id/appointments')
   @UseGuards(AgentJwtAuthGuard)

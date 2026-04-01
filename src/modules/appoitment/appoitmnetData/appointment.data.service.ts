@@ -17,6 +17,8 @@ import {
   ProductDocument,
 } from "src/modules/products/schemas/product.schema";
 import { AppointmentStatus } from "../dto/appoitment.dto";
+import { Types } from 'mongoose';
+import {Console} from "console";
 
 @Injectable()
 export class AppoitmenDatatService {
@@ -161,7 +163,12 @@ export class AppoitmenDatatService {
     };
   }
 
-  async getAgentAppointments(agentId: string, referralCode: string) {
+  async getAgentAppointments(
+    agentId: string,
+    referralCode: string,
+    search?: string,
+    status?: string,
+  ) {
     const or: Record<string, string>[] = [];
 
     if (referralCode) {
@@ -184,8 +191,6 @@ export class AppoitmenDatatService {
       .lean()
       .exec();
 
-    // NEW LOGIC STARTS HERE
-
     const userIds = appointments.map((a) => a.userId);
 
     // get users
@@ -198,37 +203,245 @@ export class AppoitmenDatatService {
       users.map((u) => [u._id.toString(), u]),
     );
 
-    // get product counts
-    const productCounts = await this.ProductModel.aggregate([
-      {
-        $match: {
-          userId: { $in: userIds },
-        },
-      },
-      {
-        $group: {
-          _id: "$userId",
-          count: { $sum: 1 },
-        },
-      },
-    ]);
 
-  
+    const allProductIds = appointments.flatMap((a) =>
+      (a.productIds || []).map((id) => new Types.ObjectId(id))
+    );
+
+    //NEW: fetch valid products
+    const products = await this.ProductModel.find({
+      _id: { $in: allProductIds },
+    })
+      .select("_id")
+      .lean();
+
+    // NEW: create Set for fast lookup
+    const validProductSet = new Set(
+      products.map((p) => p._id.toString())
+    );
+
     // merge everything
-    const result = appointments.map((appt) => {
+    let result = appointments.map((appt) => {
       const user = userMap.get(appt.userId.toString());
 
       return {
         ...appt,
         userName: user?.fullName || "",
         email: user?.email || "",
-        productCount: appt.productIds?.length || 0,
+
+        // FIXED productCount
+        productCount:
+          appt.productIds?.filter((id) =>
+            validProductSet.has(id.toString())
+          ).length || 0,
       };
     });
+
+    // SEARCH (name + email + status)
+    if (search) {
+      const searchLower = search.toLowerCase();
+
+      result = result.filter((item) =>
+        item.userName?.toLowerCase().includes(searchLower) ||
+        item.email?.toLowerCase().includes(searchLower) ||
+        item.status?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // STATUS FILTER
+    if (status) {
+      result = result.filter(
+        (item) =>
+          item.status?.toLowerCase() === status.toLowerCase()
+      );
+    }
 
     return result;
   }
 
+  async getAppointmentDetails(
+    appointmentId: string,
+    agentId: string,
+    referralCode: string,
+  ) {
+    if (!Types.ObjectId.isValid(appointmentId)) {
+      throw new NotFoundException('Invalid Appointment ID');
+    }
+
+    const identifier = referralCode || agentId;
+
+    const result = await this.appointmentModel.aggregate([
+      {
+        $match: {
+          _id: new Types.ObjectId(appointmentId),
+          ...(identifier && {
+            $or: [
+              { referralCode: identifier },
+              { agentId: identifier },
+              { agentid: identifier },
+            ],
+          }),
+        },
+      },
+
+      // USER
+      {
+        $addFields: {
+          userObjectId: { $toObjectId: '$userId' },
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userObjectId',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      {
+        $unwind: {
+          path: '$user',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      // FIX: convert productIds → ObjectId
+      {
+        $addFields: {
+          productObjectIds: {
+            $map: {
+              input: { $ifNull: ['$productIds', []] },
+              as: 'pid',
+              in: { $toObjectId: '$$pid' },
+            },
+          },
+        },
+      },
+
+      // FETCH PRODUCTS (correct way)
+      {
+        $lookup: {
+          from: 'products', // make sure collection name is correct
+          localField: 'productObjectIds',
+          foreignField: '_id',
+          as: 'products',
+        },
+      },
+
+      //  FINAL RESPONSE
+      {
+        $project: {
+          _id: 0,
+          appointmentId: '$_id',
+          date: 1,
+          time: {
+            $concat: ['$slotStartTime', ' - ', '$slotEndTime'],
+          },
+          status: 1,
+
+          customerId: '$user._id',
+          customerName: '$user.fullName',
+          email: '$user.email',
+
+          numberOfProducts: { $size: '$products' },
+
+          products: {
+            $map: {
+              input: '$products',
+              as: 'p',
+              in: {
+                productId: '$$p._id',
+                name: '$$p.name',
+                categories:'$$p.categories',
+                price: '$$p.mrpPrice',
+              },
+            },
+          },
+        },
+      },
+    ]);
+
+    if (!result.length) {
+      throw new NotFoundException(
+        'Appointment not found or unauthorized',
+      );
+    }
+
+    return result[0];
+  }
+
+  async getAppointmentCounts(
+    agentId: string,
+    referralCode: string,
+  ) {
+    const identifier = referralCode || agentId;
+
+    const matchCondition: any = {};
+
+    if (identifier) {
+      matchCondition.$or = [
+        { referralCode: identifier },
+        { agentId: identifier },
+        { agentid: identifier },
+      ];
+    }
+
+    const result = await this.appointmentModel.aggregate([
+      {
+        $match: matchCondition,
+      },
+      {
+        $group: {
+          _id: null,
+
+          total: { $sum: 1 },
+
+          confirmed: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'CONFIRMED'] }, 1, 0],
+            },
+          },
+
+          isPurchased: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'ISPURCHASED'] }, 1, 0],
+            },
+          },
+
+          isVisited: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'ISVISITED'] }, 1, 0],
+            },
+          },
+
+          notVisited: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'NOTVISITED'] }, 1, 0],
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          total: 1,
+          confirmed: 1,
+          isPurchased: 1,
+          isVisited: 1,
+          notVisited: 1,
+        },
+      },
+    ]);
+
+    return result[0] || {
+      total: 0,
+      confirmed: 0,
+      isPurchased: 0,
+      isVisited: 0,
+      notVisited: 0,
+    };
+  }
+  
   async getAppointmentsById(appointmentid: string) {
     const appointment = await this.appointmentModel
       .findById(appointmentid)
