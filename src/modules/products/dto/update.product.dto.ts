@@ -49,4 +49,8 @@ export class UpdateProductDto {
   @IsOptional()
   @IsEnum(ProductStatus)
   status?: ProductStatus;
+
+  @IsOptional()
+  @IsNumber()
+  commissionPercentage?: number;
 }
