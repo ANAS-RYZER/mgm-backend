@@ -245,7 +245,7 @@ export class ProductsUserService {
       $unwind: "$productSku",
     },
 
-    // ✅ Step 2: Group by SKU (string)
+    // Step 2: Group by SKU (string)
     {
       $group: {
         _id: "$productSku",
@@ -253,17 +253,17 @@ export class ProductsUserService {
       },
     },
 
-    // ✅ Step 3: Sort highest orders first
+    //Step 3: Sort highest orders first
     {
       $sort: { orderCount: -1 },
     },
 
-    // ✅ Step 4: Limit top 5
+    // Step 4: Limit top 5
     {
       $limit: limit,
     },
 
-    // ✅ Step 5: Lookup product using SKU
+    //Step 5: Lookup product using SKU
     {
       $lookup: {
         from: "products",
@@ -273,7 +273,7 @@ export class ProductsUserService {
       },
     },
 
-    // ✅ Step 6: Remove empty matches
+    //Step 6: Remove empty matches
     {
       $unwind: {
         path: "$product",
@@ -281,7 +281,7 @@ export class ProductsUserService {
       },
     },
 
-    // ✅ Step 7: Final output
+    // Step 7: Final output
     {
       $project: {
         _id: 0,
