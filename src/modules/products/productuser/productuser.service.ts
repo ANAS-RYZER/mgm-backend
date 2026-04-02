@@ -11,6 +11,8 @@ import { Model } from "mongoose";
 import { Product, ProductDocument } from "../schemas/product.schema";
 import { Categories } from "../interfaces/product.interface";
 import { WishlistService } from "../../wishlist/wishlist.service";
+import { Wishlist, WishlistDocument } from "../../wishlist/schemas/wishlist.schema";
+import { Order, OrderDocument } from "../../order/schema/order.schema";
 
 @Injectable()
 export class ProductsUserService {
@@ -18,6 +20,12 @@ export class ProductsUserService {
   constructor(
     @InjectModel(Product.name)
     private readonly productModel: Model<ProductDocument>,
+
+    @InjectModel(Wishlist.name)
+    private readonly wishlistModel: Model<WishlistDocument>,
+    
+    @InjectModel(Order.name)
+    private readonly orderModel: Model<OrderDocument>,
 
     private readonly wishlistService: WishlistService
   ) {}
@@ -180,6 +188,112 @@ export class ProductsUserService {
   
     };
   }
+
+  async getTopWishlistedProducts(limit: number = 5) {
+    return this.wishlistModel.aggregate([
+      {
+        $group: {
+          _id: "$productId",
+          wishlistCount: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { wishlistCount: -1 },
+      },
+      {
+        $limit: limit,
+      },
+      {
+        $lookup: {
+          from: "products",
+          let: { productId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$_id", "$$productId"] },
+              },
+            },
+            {
+              $project: {
+                name: 1,
+                image: 1,
+                categories: 1,
+              },
+            },
+          ],
+          as: "product",
+        },
+      },
+      {
+        $unwind: "$product",
+      },
+      {
+        $project: {
+          _id: 0,
+          productId: "$_id",
+          wishlistCount: 1,
+          product: 1,
+        },
+      },
+    ]);
+  }
+
+  async getTopOrderedProducts(limit: number = 5) {
+  return this.orderModel.aggregate([
+    // Step 1: Unwind SKU array
+    {
+      $unwind: "$productSku",
+    },
+
+    // ✅ Step 2: Group by SKU (string)
+    {
+      $group: {
+        _id: "$productSku",
+        orderCount: { $sum: 1 },
+      },
+    },
+
+    // ✅ Step 3: Sort highest orders first
+    {
+      $sort: { orderCount: -1 },
+    },
+
+    // ✅ Step 4: Limit top 5
+    {
+      $limit: limit,
+    },
+
+    // ✅ Step 5: Lookup product using SKU
+    {
+      $lookup: {
+        from: "products",
+        localField: "_id",   // SKU from orders
+        foreignField: "sku", // SKU in product
+        as: "product",
+      },
+    },
+
+    // ✅ Step 6: Remove empty matches
+    {
+      $unwind: {
+        path: "$product",
+        preserveNullAndEmptyArrays: false,
+      },
+    },
+
+    // ✅ Step 7: Final output
+    {
+      $project: {
+        _id: 0,
+        sku: "$_id",
+        orderCount: 1,
+        name: "$product.name",
+        image: "$product.image",
+        categories: "$product.categories",
+      },
+    },
+  ]);
+}
 
 
 
