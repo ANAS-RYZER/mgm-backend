@@ -27,6 +27,8 @@ import { Product, ProductSchema } from "../products/schemas/product.schema";
 import { Order, OrderSchema } from "../order/schema/order.schema";
 import { Appointment,AppointmentSchema } from "../appoitment/schema/appointment.schema";
 import { AgentCommission, AgentCommissionSchema } from "./schemas/agent.commission.schema";
+import { AdminCommissionModule } from '../agents/adminCommission/agentCommission.module';
+
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -62,6 +64,7 @@ import { AgentCommission, AgentCommissionSchema } from "./schemas/agent.commissi
     EmailModule, // Import for EmailService
     RedisModule, // Import for Redis/Session storage
     ConfigModule,
+    AdminCommissionModule,
   ],
   controllers: [AgentController, AgentDashboardController],
   providers: [

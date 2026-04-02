@@ -599,40 +599,46 @@ export class AgentDashboardService {
     // RECENT APPOINTMENTS
 
     const recentAppointments = await this.appointmentModel.aggregate([
-      { $match: matchCondition },
-
-      {
-        $lookup: {
-          from: "users",
-          localField: "userId",
-          foreignField: "_id",
-          as: "user",
-        },
-      },
-
-      {
-        $unwind: {
-          path: "$user",
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-
-      {
-        $project: {
-          _id: 1,
-          customerName: "$user.fullName",
-          date: 1,
-          slot: {
-            $concat: ["$slotStartTime", " - ", "$slotEndTime"],
+        { $match: matchCondition },
+        // Convert userId string → ObjectId
+        {
+          $addFields: {
+            userIdObj: { $toObjectId: "$userId" },
           },
-          status: 1,
-          createdAt: 1,
         },
-      },
 
-      { $sort: { createdAt: -1 } },
-      { $limit: 5 },
-    ]);
+        {
+          $lookup: {
+            from: "users",
+            localField: "userIdObj",
+            foreignField: "_id",
+            as: "user",
+          },
+        },
+
+        {
+          $unwind: {
+            path: "$user",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+
+        {
+          $project: {
+            _id: 1,
+            customerName: "$user.fullName",
+            date: 1,
+            slot: {
+              $concat: ["$slotStartTime", " - ", "$slotEndTime"],
+            },
+            status: 1,
+            createdAt: 1,
+          },
+        },
+
+        { $sort: { createdAt: -1 } },
+        { $limit: 5 },
+      ]);
     // RECENT CUSTOMERS
 
     const recentCustomers = referralCode
