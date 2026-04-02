@@ -349,6 +349,160 @@ export class AgentDashboardService {
     };
   }
 
+  async getAgentDashboard(
+    agentId: string,
+    referralCode: string,
+  ) {
+    // =============================
+    // ✅ AGENT DETAILS
+    // =============================
+    const agent = referralCode
+      ? await this.agentProfileModel
+          .findOne({ referralCode })
+          .select("name agentId referralCode")
+      : await this.agentProfileModel
+          .findOne({ agentId })
+          .select("name agentId referralCode");
 
+    const agentName = agent?.name || "";
+
+    // =============================
+    // COMMON MATCH LOGIC
+    // =============================
+    const or: any[] = [];
+
+    if (referralCode) {
+      or.push(
+        { referralCode },
+        { agentId: referralCode },
+        { agentid: referralCode },
+      );
+    }
+
+    if (!referralCode && agentId) {
+      or.push({ agentId }, { agentid: agentId });
+    }
+
+    const matchCondition = or.length ? { $or: or } : {};
+
+    // =============================
+    // TOTAL APPOINTMENTS
+    // =============================
+    const totalAppointments =
+      await this.appointmentModel.countDocuments(matchCondition);
+
+    // =============================
+    // TOTAL CUSTOMERS (REFERRAL BASED)
+    // =============================
+    const totalCustomers = referralCode
+      ? await this.userModel.countDocuments({ refId: referralCode })
+      : 0;
+
+    // =============================
+    // VISITED RATE
+    // =============================
+    const visitedCount =
+      await this.appointmentModel.countDocuments({
+        ...matchCondition,
+        status: "ISVISITED",
+      });
+
+    const visitedRate =
+      totalAppointments > 0
+        ? Math.round((visitedCount / totalAppointments) * 100)
+        : 0;
+
+    // =============================
+    // STATUS STATS
+    // =============================
+    const statusAgg = await this.appointmentModel.aggregate([
+      { $match: matchCondition },
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const appointmentStatus = {
+      total: 0,
+      confirmed: 0,
+      visited: 0,
+      purchased: 0,
+      notVisited: 0,
+    };
+
+    statusAgg.forEach((s) => {
+      appointmentStatus.total += s.count;
+
+      if (s._id === "CONFIRMED") appointmentStatus.confirmed = s.count;
+      if (s._id === "ISVISITED") appointmentStatus.visited = s.count;
+      if (s._id === "ISPURCHASED") appointmentStatus.purchased = s.count;
+      if (s._id === "NOTVISITED") appointmentStatus.notVisited = s.count;
+    });
+
+    // =============================
+    // ✅ RECENT APPOINTMENTS (TOP 5)
+    // =============================
+    const recentAppointments = await this.appointmentModel.aggregate([
+      {
+        $match: matchCondition,
+      },
+
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+
+      {
+        $unwind: {
+          path: "$user",
+          preserveNullAndEmptyArrays: true, // prevent data loss
+        },
+      },
+
+      {
+        $project: {
+          _id: 1,
+          customerName: "$user.fullName",
+          date: 1,
+          slot: {
+            $concat: ["$slotStartTime", " - ", "$slotEndTime"],
+          },
+          status: 1,
+          createdAt: 1,
+        },
+      },
+
+      { $sort: { createdAt: -1 } },
+      { $limit: 5 },
+    ]);
+
+    // =============================
+    // ✅ RECENT CUSTOMERS (REFERRAL BASED)
+    // =============================
+    const recentCustomers = referralCode
+      ? await this.userModel
+          .find({ refId: referralCode })
+          .sort({ createdAt: -1 })
+          .limit(5)
+          .select("fullName email createdAt")
+      : [];
+
+    return {
+      agentName,
+      totalCustomers,
+      totalAppointments,
+      visitedRate,
+      appointmentStatus,
+      recentAppointments,
+      recentCustomers,
+    };
+  }
 
 }

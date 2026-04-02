@@ -127,4 +127,21 @@ export class AgentDashboardController {
     const agent = await this.agentDashboardService.getAgent(agentId);
     return agent;
   }
+
+  @Get("agent/dashboard")
+  @UseGuards(AgentJwtAuthGuard)
+  async getDashboard(@Req() req: any) {
+    const agentId = req.agent?.agentId ?? "";
+    const referralCode = req.agentReferralCode ?? "";
+
+    const data = await this.agentDashboardService.getAgentDashboard(
+      agentId,
+      referralCode,
+    );
+
+    return {
+      message: "Dashboard fetched successfully",
+      data,
+    };
+  }
 }
