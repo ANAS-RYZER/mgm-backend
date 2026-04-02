@@ -48,6 +48,8 @@ export class OrderService {
     if (!appointment) {
       throw new NotFoundException("Appointment not found");
     }
+    
+    console.log("create Dto", createDto);
 
     // Create order using appointment data
     const order = await this.orderModel.create({
@@ -72,6 +74,10 @@ export class OrderService {
       { new: true },
     );
 
+    // Create commission record for the agent as soon as order is created.
+    // (Dashboard will then be able to show commission immediately.)
+    await this.createAgentCommission(order);
+
     return {
       orderId: order._id,
       status: order.status,
@@ -83,17 +89,57 @@ export class OrderService {
     // Safety check
     if (!order.totalPrice || !order.userId) return;
 
-    //  Find agent using referralCode stored in order.agentId
+    // Find agent using referralCode OR agentId stored in order.agentId
     const agent = await this.agentProfileModel
-      .findOne({ referralCode: order.agentId })
+      .findOne({
+        $or: [{ referralCode: order.agentId }, { agentId: order.agentId }],
+      })
       .lean()
       .exec();
 
     if (!agent) return;
 
-    const commissionPercentage = 2;
+    // Commission comes from order.breakdown.commission if frontend computed it,
+    // otherwise fall back to product commissionPercentage.
+    const totalPrice = Number(order.totalPrice);
+    const breakdownCommission = order.breakdown?.commission;
 
-    const commissionAmount = (order.totalPrice * commissionPercentage) / 100;
+    let commissionAmount: number | undefined =
+      typeof breakdownCommission === "number" ? breakdownCommission : undefined;
+    let commissionPercentage: number | undefined;
+
+    if (commissionAmount !== undefined && totalPrice > 0) {
+      commissionPercentage = Number(
+        ((commissionAmount / totalPrice) * 100).toFixed(2),
+      );
+      commissionAmount = Number(commissionAmount.toFixed(2));
+    }
+
+    // If breakdown commission is missing, use product commissionPercentage.
+    if (
+      commissionPercentage === undefined ||
+      commissionPercentage === 0 ||
+      commissionAmount === undefined
+    ) {
+      const productSkus = order.productSku ?? [];
+      const products = await this.productModel
+        .find({ sku: { $in: productSkus } })
+        .select("commissionPercentage")
+        .lean()
+        .exec();
+
+      const productPerc = products?.[0]?.commissionPercentage;
+      if (typeof productPerc === "number") {
+        commissionPercentage = productPerc;
+        commissionAmount = Number(
+          ((totalPrice * commissionPercentage) / 100).toFixed(2),
+        );
+      }
+    }
+
+    // Final safety fallback to avoid schema validation errors.
+    commissionPercentage = commissionPercentage ?? 0;
+    commissionAmount = commissionAmount ?? 0;
 
     // Prevent duplicate commission
     const existingCommission = await this.agentCommissionModel.findOne({

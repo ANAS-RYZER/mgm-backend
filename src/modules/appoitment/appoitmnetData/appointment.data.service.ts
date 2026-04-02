@@ -472,7 +472,7 @@ export class AppoitmenDatatService {
         _id: { $in: appointment.productIds || [] },
       })
         .select(
-          "name sku mrpPrice goldSpecs stoneSpecs image makingChanges cgst netprice grossPrice discountedPrice discountedPercentage sgst va",
+          "name sku mrpPrice goldSpecs stoneSpecs image makingChanges cgst netprice grossPrice discountedPrice discountedPercentage sgst va commissionPercentage",
         )
         .lean(),
     ]);

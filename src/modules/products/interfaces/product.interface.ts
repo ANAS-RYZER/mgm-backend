@@ -117,6 +117,7 @@ export interface IProduct {
   description?: string;
   mrpPrice: number;
   discountedPrice?: number;
+  commissionPercentage?: number;
   image?: string;
   gallery?: string[];
   stockQuantity: number;

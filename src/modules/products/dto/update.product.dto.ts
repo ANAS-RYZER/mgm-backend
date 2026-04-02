@@ -92,14 +92,48 @@ export class UpdateProductDto {
     @IsString()
     material?: string;
     
-  
-    @IsOptional()
-    @IsArray()
-    @ValidateNested({ each: true })
-    @Type(() => StoneDetailsDto)
-    stoneSpecs?: StoneDetailsDto[];
-  
-    @IsOptional()
-    @IsString()
-    uploadRefId?: string;
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsNumber()
+  mrpPrice?: number;
+
+  @IsOptional()
+  @IsNumber()
+  discountedPrice?: number;
+
+  @IsOptional()
+  @IsString()
+  image?: string;
+
+  @IsOptional()
+  gallery?: string[];
+
+  @IsOptional()
+  @IsNumber()
+  stockQuantity?: number;
+
+  @IsOptional()
+  @IsEnum(Categories)
+  categories?: Categories;
+
+  @IsOptional()
+  goldSpecs?: any;
+
+  @IsOptional()
+  stoneSpecs?: any[];
+
+  @IsOptional()
+  @IsEnum(ProductStatus)
+  status?: ProductStatus;
+
+  @IsOptional()
+  @IsNumber()
+  commissionPercentage?: number;
 }

@@ -125,6 +125,39 @@ export class AgentDashboardController {
   async getAgent(@Req() req: Request) {
     const agentId = req['agent'].agentId;
     const agent = await this.agentDashboardService.getAgent(agentId);
-    return agent;
+    const commissionSummary =
+      await this.agentDashboardService.getCommissionSummary(agentId);
+    return {
+      agent,
+      commissionSummary,
+    };
+  }
+
+  @Get("commission")
+  @UseGuards(AgentJwtAuthGuard)
+  async getMyCommissions(
+    @Req() req: Request,
+    @Query("page") page: number = 1,
+    @Query("limit") limit: number = 10,
+  ) {
+    const agentId = req["agent"].agentId;
+    return this.agentDashboardService.getMyCommissions(agentId, page, limit);
+  }
+
+  @Get("agent/dashboard")
+  @UseGuards(AgentJwtAuthGuard)
+  async getDashboard(@Req() req: any) {
+    const agentId = req.agent?.agentId ?? "";
+    const referralCode = req.agentReferralCode ?? "";
+
+    const data = await this.agentDashboardService.getAgentDashboard(
+      agentId,
+      referralCode,
+    );
+
+    return {
+      message: "Dashboard fetched successfully",
+      data,
+    };
   }
 }

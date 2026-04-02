@@ -111,4 +111,10 @@ export class AddProductDto {
   @IsOptional()
   @IsString()
   uploadRefId?: string;
+
+  @IsOptional()
+  @IsNumber()
+  commissionPercentage?: number;
+
+
 }

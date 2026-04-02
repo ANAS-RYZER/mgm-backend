@@ -136,6 +136,9 @@ export class Product  {
   @Prop({ type: [StoneDetailsSchema] })
   stoneSpecs?: StoneDetails[];
 
+  @Prop({ type: Number, default: 0 })
+  commissionPercentage?: number;
+
   
 }
 

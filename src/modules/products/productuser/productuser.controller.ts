@@ -34,6 +34,26 @@ export class ProductsUserController {
     return this.productsuserService.getProductuserById(productId, userId);
   }
 
+  @Get('featured')
+  async getTopWishlistProducts() {
+    const data = await this.productsuserService.getTopWishlistedProducts(5);
+
+    return {
+      message: 'Top 5 wishlisted products',
+      data,
+    };
+  }
+
+  @Get('bestsellers')
+  async getTopProducts() {
+    const topProducts = await this.productsuserService.getTopOrderedProducts(5);
+
+    return {
+      message: 'Top 5 highest ordered products',
+      data: topProducts,
+    };
+  }
+
 
   @Get('all')
   @HttpCode(HttpStatus.OK)
