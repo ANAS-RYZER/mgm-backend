@@ -23,7 +23,7 @@ export class AddProductDto {
   @IsString()
   @IsNotEmpty()
   name: string;
-
+ 
   @IsOptional()
   @IsString()
   description?: string;

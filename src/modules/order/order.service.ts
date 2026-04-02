@@ -161,44 +161,128 @@ export class OrderService {
     return updatedOrder;
   }
 
-  // Get Single Order
   async findOne(orderId: string) {
-    const order = await this.orderModel
-      .findById(orderId)
-      .populate("appointmentId")
-      .populate("userId", "fullName email avatar")
-      .lean()
-      .exec();
+    const [order] = await this.orderModel.aggregate([
+      {
+        $match: {
+          _id: new Types.ObjectId(orderId),
+        },
+      },
+
+      {
+        $lookup: {
+          from: "users",
+          let: { userId: "$userId" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$_id", { $toObjectId: "$$userId" }],
+                },
+              },
+            },
+            {
+              $project: {
+                fullName: 1,
+                email: 1,
+                avatar: 1,
+              },
+            },
+          ],
+          as: "user",
+        },
+      },
+      {
+        $unwind: {
+
+          path: "$user",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      {
+        $lookup: {
+          from: "appointments",
+          localField: "appointmentId",
+          foreignField: "_id",
+          as: "appointmentDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$appointmentDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      {
+        $lookup: {
+          from: "agentprofiles",
+          let: { agentId: "$agentId" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$referralCode", "$$agentId"] },
+              },
+            },
+            {
+              $project: {
+                name: 1,
+                email: 1,
+                phoneNumber: 1,
+                agentId: 1,
+              },
+            },
+          ],
+          as: "agent",
+        },
+      },
+      {
+        $unwind: {
+          path: "$agent",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      // 🔗 Product Details (by SKU)
+      {
+        $lookup: {
+          from: "products",
+          let: { skus: "$productSku" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $in: ["$sku", "$$skus"] },
+              },
+            },
+            {
+              $project: {
+                name: 1,
+                sku: 1,
+                image: 1,
+                mrpPrice: 1,
+                discountedPrice: 1,
+                quantity: 1,
+              },
+            },
+          ],
+          as: "productDetails",
+        },
+      },
+
+      {
+        $project: {
+          __v: 0,
+          "userDetails.password": 0,
+        },
+      },
+    ]);
 
     if (!order) {
       throw new NotFoundException("Order not found");
     }
 
-    //  Get Agent Details
-    let agentDetails: any = null;
-
-    if (order.agentId) {
-      agentDetails = await this.agentProfileModel
-        .findOne({ referralCode: order.agentId }, "fullName email")
-        .lean()
-        .exec();
-    }
-
-    // Get Product Details using SKU
-    let productDetails: any[] = [];
-
-    if (order.productSku && order.productSku.length > 0) {
-      productDetails = await this.productModel
-        .find({ sku: { $in: order.productSku } })
-        .lean()
-        .exec();
-    }
-
-    return {
-      ...order,
-      agentDetails,
-      productDetails,
-    };
+    return order;
   }
 
   async getAllOrders(search?: string, page = 1, limit = 10) {
