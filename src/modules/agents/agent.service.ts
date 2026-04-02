@@ -416,14 +416,15 @@ export class AgentService {
     sessionId: string;
   }> {
     const { refreshToken, sessionId } = refreshTokenDto;
-
+    // Verify refresh token
     let payload;
     try {
       payload = this.agentJwtService.verifyRefreshToken(refreshToken);
     } catch (error) {
       throw new UnauthorizedException("Invalid or expired refresh token");
     }
-
+    
+    // Validate refresh token in storage
     const isValid = await this.agentTokenStorageService.validateRefreshToken(
       sessionId,
       refreshToken,
@@ -432,7 +433,8 @@ export class AgentService {
     if (!isValid) {
       throw new UnauthorizedException("Invalid refresh token");
     }
-
+    
+    // Generate new tokens
     const newAccessToken = this.agentJwtService.generateAccessToken({
       agentId: payload.agentId,
       email: payload.email,
@@ -444,7 +446,8 @@ export class AgentService {
       email: payload.email,
       sessionId,
     });
-
+    
+    // Update refresh token in storage
     await this.agentTokenStorageService.storeTokens(
       sessionId,
       payload.agentId,
