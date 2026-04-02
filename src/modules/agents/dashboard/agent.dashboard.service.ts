@@ -452,9 +452,7 @@ export class AgentDashboardService {
     agentId: string,
     referralCode: string,
   ) {
-    // =============================
-    // ✅ AGENT DETAILS
-    // =============================
+    //  AGENT DETAILS
     const agent = referralCode
       ? await this.agentProfileModel
           .findOne({ referralCode })
@@ -465,89 +463,143 @@ export class AgentDashboardService {
 
     const agentName = agent?.name || "";
 
-    // =============================
-    // COMMON MATCH LOGIC
-    // =============================
+    // MATCH LOGIC
     const or: any[] = [];
 
     if (referralCode) {
-      or.push(
-        { referralCode },
-        { agentId: referralCode },
-        { agentid: referralCode },
-      );
+      or.push({ referralCode });
     }
 
-    if (!referralCode && agentId) {
+    if (agentId) {
       or.push({ agentId }, { agentid: agentId });
     }
 
     const matchCondition = or.length ? { $or: or } : {};
 
-    // =============================
-    // TOTAL APPOINTMENTS
-    // =============================
-    const totalAppointments =
-      await this.appointmentModel.countDocuments(matchCondition);
-
-    // =============================
-    // TOTAL CUSTOMERS (REFERRAL BASED)
-    // =============================
-    const totalCustomers = referralCode
-      ? await this.userModel.countDocuments({ refId: referralCode })
-      : 0;
-
-    // =============================
-    // VISITED RATE
-    // =============================
-    const visitedCount =
-      await this.appointmentModel.countDocuments({
-        ...matchCondition,
-        status: "ISVISITED",
-      });
-
-    const visitedRate =
-      totalAppointments > 0
-        ? Math.round((visitedCount / totalAppointments) * 100)
-        : 0;
-
-    // =============================
-    // STATUS STATS
-    // =============================
-    const statusAgg = await this.appointmentModel.aggregate([
+    // APPOINTMENT STATS (OPTIMIZED)
+    const stats = await this.appointmentModel.aggregate([
       { $match: matchCondition },
       {
         $group: {
-          _id: "$status",
-          count: { $sum: 1 },
+          _id: null,
+          total: { $sum: 1 },
+
+          confirmed: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "CONFIRMED"] }, 1, 0],
+            },
+          },
+
+          visited: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "ISVISITED"] }, 1, 0],
+            },
+          },
+
+          purchased: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "ISPURCHASED"] }, 1, 0],
+            },
+          },
+
+          notVisited: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "NOTVISITED"] }, 1, 0],
+            },
+          },
         },
       },
     ]);
 
-    const appointmentStatus = {
-      total: 0,
-      confirmed: 0,
-      visited: 0,
-      purchased: 0,
-      notVisited: 0,
-    };
+    const totalAppointments = stats[0]?.total || 0;
+    const confirmedCount = stats[0]?.confirmed || 0;
+    const visitedCount = stats[0]?.visited || 0;
+    const purchasedCount = stats[0]?.purchased || 0;
+    const notVisitedCount = stats[0]?.notVisited || 0;
 
-    statusAgg.forEach((s) => {
-      appointmentStatus.total += s.count;
+    //  VISITED RATE (VISITED + PURCHASED)
+    const visitedRate =
+      totalAppointments > 0
+        ? Math.round(
+            ((visitedCount + purchasedCount) / totalAppointments) * 100,
+          )
+        : 0;
 
-      if (s._id === "CONFIRMED") appointmentStatus.confirmed = s.count;
-      if (s._id === "ISVISITED") appointmentStatus.visited = s.count;
-      if (s._id === "ISPURCHASED") appointmentStatus.purchased = s.count;
-      if (s._id === "NOTVISITED") appointmentStatus.notVisited = s.count;
-    });
+    // TOTAL CUSTOMERS
 
-    // =============================
-    // ✅ RECENT APPOINTMENTS (TOP 5)
-    // =============================
-    const recentAppointments = await this.appointmentModel.aggregate([
+    const totalCustomers = referralCode
+      ? await this.userModel.countDocuments({ refId: referralCode })
+      : 0;
+
+    // TOTAL EARNINGS
+
+    const earningsAgg = await this.agentCommissionModel.aggregate([
       {
-        $match: matchCondition,
+        $match: {
+          ...(referralCode ? { referralCode } : {}),
+        },
       },
+      {
+        $group: {
+          _id: null,
+          totalEarnings: { $sum: "$commissionAmount" },
+        },
+      },
+    ]);
+
+    const totalEarnings = earningsAgg[0]?.totalEarnings || 0;
+
+    // MONTHLY EARNINGS
+
+    const monthlyAgg = await this.agentCommissionModel.aggregate([
+      {
+        $match: {
+          ...(referralCode ? { referralCode } : {}),
+        },
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" },
+          },
+          total: { $sum: "$commissionAmount" },
+        },
+      },
+      {
+        $sort: {
+          "_id.year": 1,
+          "_id.month": 1,
+        },
+      },
+    ]);
+
+    const monthNames = [
+      "",
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+
+    const monthlyEarnings = monthlyAgg.map((item) => ({
+      year: item._id.year,
+      month: monthNames[item._id.month],
+      earnings: item.total,
+    }));
+
+    // RECENT APPOINTMENTS
+
+    const recentAppointments = await this.appointmentModel.aggregate([
+      { $match: matchCondition },
 
       {
         $lookup: {
@@ -561,7 +613,7 @@ export class AgentDashboardService {
       {
         $unwind: {
           path: "$user",
-          preserveNullAndEmptyArrays: true, // prevent data loss
+          preserveNullAndEmptyArrays: true,
         },
       },
 
@@ -581,10 +633,8 @@ export class AgentDashboardService {
       { $sort: { createdAt: -1 } },
       { $limit: 5 },
     ]);
+    // RECENT CUSTOMERS
 
-    // =============================
-    // ✅ RECENT CUSTOMERS (REFERRAL BASED)
-    // =============================
     const recentCustomers = referralCode
       ? await this.userModel
           .find({ refId: referralCode })
@@ -593,12 +643,21 @@ export class AgentDashboardService {
           .select("fullName email createdAt")
       : [];
 
+    //  FINAL RESPONSE
     return {
       agentName,
+      totalEarnings,
       totalCustomers,
       totalAppointments,
       visitedRate,
-      appointmentStatus,
+      appointmentStatus: {
+        total: totalAppointments,
+        confirmed: confirmedCount,
+        visited: visitedCount,
+        purchased: purchasedCount,
+        notVisited: notVisitedCount,
+      },
+      monthlyEarnings,
       recentAppointments,
       recentCustomers,
     };
