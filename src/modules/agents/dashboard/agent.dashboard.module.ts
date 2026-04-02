@@ -10,6 +10,7 @@ import { AgentProfile, AgentProfileSchema } from '../schemas/agent.profile.schem
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from '../../users/schemas/user.schema';
 import { Order , OrderSchema} from '../../order/schema/order.schema';
+import { AgentCommission, AgentCommissionSchema } from '../schemas/agent.commission.schema';
 
 
 @Module({
@@ -19,6 +20,7 @@ import { Order , OrderSchema} from '../../order/schema/order.schema';
       { name: User.name, schema: UserSchema },
       { name: Product.name, schema: ProductSchema },
       { name: Order.name, schema: OrderSchema },
+      { name: AgentCommission.name, schema: AgentCommissionSchema },
     ]),
   ],
   controllers: [AgentDashboardController],

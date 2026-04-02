@@ -4,6 +4,7 @@ import { Model, Types } from "mongoose";
 import { AgentDocument } from "../schemas/agent.schema";
 import { InjectModel } from "@nestjs/mongoose";
 import {  AgentProfile, AgentProfileDocument } from "../schemas/agent.profile.schema";
+import { AgentCommission, AgentCommissionDocument } from "../schemas/agent.commission.schema";
 import {  User, UserDocument } from "src/modules/users/schemas/user.schema";
 import { Product, ProductDocument } from "src/modules/products/schemas/product.schema";
 import { Order, OrderDocument } from "src/modules/order/schema/order.schema";
@@ -16,7 +17,105 @@ export class AgentDashboardService {
 , @InjectModel(User.name) private userModel: Model<UserDocument>,
   @InjectModel(Product.name) private productModel: Model<ProductDocument>,
  @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
-@InjectModel(Appointment.name) private appointmentModel: Model<AppointmentDocument>) {}
+@InjectModel(Appointment.name) private appointmentModel: Model<AppointmentDocument>,
+@InjectModel(AgentCommission.name) private agentCommissionModel: Model<AgentCommissionDocument>) {}
+
+  async getCommissionSummary(agentId: string) {
+    if (!Types.ObjectId.isValid(agentId)) {
+      throw new NotFoundException("Invalid agent id");
+    }
+
+    const agentObjectId = new Types.ObjectId(agentId);
+
+    const [stats, recentCommissions] = await Promise.all([
+      this.agentCommissionModel.aggregate([
+        { $match: { agentId: agentObjectId } },
+        {
+          $group: {
+            _id: null,
+            totalCommissionAmount: { $sum: "$commissionAmount" },
+            paidCommissionAmount: {
+              $sum: {
+                $cond: ["$isPaid", "$commissionAmount", 0],
+              },
+            },
+            paidCount: { $sum: { $cond: ["$isPaid", 1, 0] } },
+            unpaidCount: { $sum: { $cond: ["$isPaid", 0, 1] } },
+          },
+        },
+      ]),
+      this.agentCommissionModel
+        .find({ agentId: agentObjectId })
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .lean()
+        .exec(),
+    ]);
+
+    const safeStats = stats?.[0] ?? {
+      totalCommissionAmount: 0,
+      paidCommissionAmount: 0,
+      unpaidCount: 0,
+      paidCount: 0,
+    };
+
+    const totalCommissionAmount = safeStats.totalCommissionAmount ?? 0;
+    const paidCommissionAmount = safeStats.paidCommissionAmount ?? 0;
+    const unpaidCommissionAmount = totalCommissionAmount - paidCommissionAmount;
+    const unpaidCount = safeStats.unpaidCount ?? 0;
+    const paidCount = safeStats.paidCount ?? 0;
+
+    return {
+      totalCommissionAmount,
+      paidCommissionAmount,
+      unpaidCommissionAmount,
+      unpaidCount,
+      paidCount,
+      recentCommissions,
+    };
+  }
+
+  async getMyCommissions(agentId: string, page = 1, limit = 10) {
+    if (!Types.ObjectId.isValid(agentId)) {
+      throw new NotFoundException("Invalid agent id");
+    }
+
+    const agentObjectId = new Types.ObjectId(agentId);
+    const skip = (page - 1) * limit;
+
+    const [commissions, totalCount] = await Promise.all([
+      this.agentCommissionModel
+        .find({ agentId: agentObjectId })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+        .exec(),
+      this.agentCommissionModel.countDocuments({ agentId: agentObjectId }),
+    ]);
+
+    const items = commissions.map((c) => ({
+      orderId: c.orderId,
+      commissionPercentage: c.commissionPercentage,
+      commissionAmount: c.commissionAmount,
+      isPaid: c.isPaid,
+      // `AgentCommission` uses `timestamps: true`, but the TS type doesn't
+      // currently expose `createdAt`.
+      createdAt: (c as any).createdAt,
+      referralCode: c.referralCode,
+    }));
+
+    const totalPages = Math.ceil(totalCount / limit);
+    return {
+      items,
+      totalCount,
+      page,
+      limit,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPreviousPage: page > 1,
+    };
+  }
 
   async getCustomersByAgentId(
     agentId: string,
