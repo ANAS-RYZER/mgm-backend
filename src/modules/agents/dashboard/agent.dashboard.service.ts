@@ -669,4 +669,352 @@ export class AgentDashboardService {
     };
   }
 
+  async getAgentCommission(
+    agentId: string,
+    referralCode: string,
+    page: number = 1,
+    limit: number = 10,
+    search?: string,
+  ) {
+
+    // AGENT DETAILS
+    const agent = referralCode
+      ? await this.agentProfileModel
+          .findOne({ referralCode })
+          .select('name agentId referralCode')
+      : await this.agentProfileModel
+          .findOne({ agentId })
+          .select('name agentId referralCode');
+
+    const agentName = agent?.name || '';
+
+
+    // MATCH LOGIC
+
+    const or: any[] = [];
+
+    if (referralCode) {
+      or.push({ referralCode });
+    }
+
+    if (agentId) {
+      or.push({ agentId }, { agentid: agentId });
+    }
+
+    const matchCondition = or.length ? { $or: or } : {};
+
+    //  PAGINATION
+
+    const skip = (page - 1) * limit;
+
+
+    // BASE PIPELINE
+
+    const pipeline: any[] = [
+      {
+        $match: matchCondition,
+      },
+
+      {
+        $addFields: {
+          userId: {
+            $cond: {
+              if: { $eq: [{ $type: "$userId" }, "string"] },
+              then: { $toObjectId: "$userId" },
+              else: "$userId",
+            },
+          },
+        },
+      },
+
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      {
+        $unwind: {
+          path: '$user',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+    ];
+
+    // SEARCH (NAME + EMAIL)
+
+    if (search) {
+      pipeline.push({
+        $match: {
+          $or: [
+            { 'user.fullName': { $regex: search, $options: 'i' } },
+            { 'user.email': { $regex: search, $options: 'i' } },
+          ],
+        },
+      });
+    }
+
+    // FINAL PROJECTION
+    pipeline.push(
+      {
+        $addFields: {
+          customerName: { $ifNull: ['$user.fullName', ''] },
+          customerEmail: { $ifNull: ['$user.email', ''] },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          orderId: 1,
+          commissionAmount: 1,
+          createdAt: 1,
+          customerName: 1,
+          customerEmail: 1,
+        },
+      },
+      {
+        $sort: { createdAt: -1 },
+      },
+      {
+        $skip: skip,
+      },
+      {
+        $limit: limit,
+      },
+    );
+
+    // EXECUTE QUERY
+    const commissions = await this.agentCommissionModel.aggregate(pipeline);
+
+    // TOTAL COUNT (WITH SEARCH)
+
+    const countPipeline: any[] = [
+      { $match: matchCondition },
+
+      {
+        $addFields: {
+          userId: {
+            $cond: {
+              if: { $eq: [{ $type: "$userId" }, "string"] },
+              then: { $toObjectId: "$userId" },
+              else: "$userId",
+            },
+          },
+        },
+      },
+
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      {
+        $unwind: {
+          path: '$user',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+    ];
+
+    if (search) {
+      countPipeline.push({
+        $match: {
+          $or: [
+            { 'user.fullName': { $regex: search, $options: 'i' } },
+            { 'user.email': { $regex: search, $options: 'i' } },
+          ],
+        },
+      });
+    }
+
+    countPipeline.push({ $count: 'total' });
+
+    const countResult = await this.agentCommissionModel.aggregate(countPipeline);
+    const totalCount = countResult[0]?.total || 0;
+
+    // FINAL RESPONSE
+    return {
+      agentName,
+      referralCode: agent?.referralCode || '',
+      commissions,
+      pagination: {
+        totalCount,
+        currentPage: page,
+        totalPages: Math.ceil(totalCount / limit),
+        limit,
+      },
+    };
+  }
+
+  async getCommissionDetails(
+    orderId: string,
+    agentId: string,
+    referralCode: string,
+  ) {
+    const or: any[] = [];
+    if (referralCode) {
+      or.push({ referralCode });
+    }
+    if (agentId) {
+      or.push({ agentId }, { agentid: agentId });
+    }
+    const matchCondition = or.length ? { $or: or } : {};
+    // AGGREGATION
+    const result = await this.agentCommissionModel.aggregate([
+      {
+        $match: {
+          orderId: new Types.ObjectId(orderId),
+          ...matchCondition,
+        },
+      },
+      //  USER JOIN
+      {
+        $addFields: {
+          userIdObj: {
+            $cond: {
+              if: { $eq: [{ $type: "$userId" }, "objectId"] },
+              then: "$userId",
+              else: { $toObjectId: "$userId" },
+            },
+          },
+        },
+      },
+      // USER JOIN
+      {
+        $lookup: {
+          from: "users",
+          localField: "userIdObj",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+      // ORDER JOIN
+      {
+        $lookup: {
+          from: "orders",
+          localField: "orderId",
+          foreignField: "_id",
+          as: "order",
+        },
+      },
+      { $unwind: { path: "$order", preserveNullAndEmptyArrays: true } },
+      // PRODUCT JOIN (using SKU array)
+      {
+        $lookup: {
+          from: "products",
+          localField: "order.productSku",
+          foreignField: "sku",
+          as: "products",
+        },
+      },
+      //  FINAL FORMAT
+      {
+        $project: {
+          _id: 0,
+          // Commission
+          orderId: 1,
+          commissionAmount: 1,
+          createdAt: 1,
+          // Customer
+          customerName: { $ifNull: ["$user.fullName", ""] },
+          customerEmail: { $ifNull: ["$user.email", ""] },
+          // Order Breakdown
+          breakdown: {
+              baseValue: { $round: [{ $ifNull: ["$order.breakdown.basePriceTotal", 0] }, 2] },
+              valueAddition: { $round: [{ $ifNull: ["$order.breakdown.vaTotal", 0] }, 2] },
+              makingCharges: { $round: [{ $ifNull: ["$order.breakdown.makingTotal", 0] }, 2] },
+              discount: { $round: [{ $ifNull: ["$order.breakdown.discountTotal", 0] }, 2] },
+              totalAmount: { $round: [{ $ifNull: ["$order.breakdown.grandTotal", 0] }, 2] },
+            },
+          // Products
+          products: {
+            $map: {
+              input: "$products",
+              as: "p",
+              in: {
+                name: "$$p.name",
+                sku: "$$p.sku",
+                image: "$$p.image",
+              },
+            },
+          },
+        },
+      },
+    ]);
+
+    return result[0] || {};
+  }
+
+  async getCommissioncount(agentId: string, referralCode: string) {
+    const agent = referralCode
+      ? await this.agentProfileModel
+          .findOne({ referralCode })
+          .select("name agentId referralCode")
+      : await this.agentProfileModel
+          .findOne({ agentId })
+          .select("name agentId referralCode");
+
+    const agentName = agent?.name || "";
+
+    // MATCH LOGIC (SAME AS YOURS)
+
+    const or: any[] = [];
+
+    if (referralCode) {
+      or.push({ referralCode });
+    }
+
+    if (agentId) {
+      or.push({ agentId }, { agentid: agentId }); // keep your existing logic
+    }
+
+    const matchCondition = or.length ? { $or: or } : {};
+
+    // COMMISSION SUMMARY
+
+    const commissionSummary = await this.agentCommissionModel.aggregate([
+      {
+        $match: matchCondition,
+      },
+      {
+        $group: {
+          _id: null,
+          totalCommissionAmount: { $sum: "$commissionAmount" },
+          // optional split
+          paidCommission: {
+            $sum: {
+              $cond: [{ $eq: ["$isPaid", true] }, "$commissionAmount", 0],
+            },
+          },
+          unpaidCommission: {
+            $sum: {
+              $cond: [{ $eq: ["$isPaid", false] }, "$commissionAmount", 0],
+            },
+          },
+        },
+      },
+    ]);
+
+    const summary = commissionSummary[0] || {
+      totalCommissionAmount: 0,
+      paidCommission: 0,
+      unpaidCommission: 0,
+    };
+
+    // FINAL RESPONSE
+
+    return {
+      agentName,
+      referralCode: agent?.referralCode || "",
+      agentId: agent?.agentId || "",
+      ...summary,
+    };
+  }
+
 }
