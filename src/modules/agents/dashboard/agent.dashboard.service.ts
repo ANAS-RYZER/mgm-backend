@@ -941,6 +941,7 @@ export class AgentDashboardService {
                 name: "$$p.name",
                 sku: "$$p.sku",
                 image: "$$p.image",
+                price:"$$p.mrpPrice",
               },
             },
           },
