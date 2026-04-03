@@ -160,4 +160,47 @@ export class AgentDashboardController {
       data,
     };
   }
+
+  @Get("commissionlist")
+  @UseGuards(AgentJwtAuthGuard)
+  async getDashboardCommission(
+    @Req() req: any,
+    @Query("page") page: number = 1,
+    @Query("limit") limit: number = 10,
+  ) {
+    const agentId = req.agent?.agentId ?? "";
+    const referralCode = req.agentReferralCode ?? "";
+
+    const data = await this.agentDashboardService.getAgentCommission(
+      agentId,
+      referralCode,
+      Number(page),
+      Number(limit),
+    );
+    return {
+      message: "Dashboard fetched successfully",
+      data,
+    };
+  }
+
+  @Get("agentcommission/:orderId")
+  @UseGuards(AgentJwtAuthGuard)
+  async getCommissionDetails(
+    @Req() req: any,
+    @Param("orderId") orderId: string,
+  ) {
+    const agentId = req.agent?.agentId ?? "";
+    const referralCode = req.agentReferralCode ?? "";
+
+    const data = await this.agentDashboardService.getCommissionDetails(
+      orderId,
+      agentId,
+      referralCode,
+    );
+
+    return {
+      message: "Commission details fetched successfully",
+      data,
+    };
+  }
 }
