@@ -951,4 +951,70 @@ export class AgentDashboardService {
     return result[0] || {};
   }
 
+  async getCommissioncount(agentId: string, referralCode: string) {
+    const agent = referralCode
+      ? await this.agentProfileModel
+          .findOne({ referralCode })
+          .select("name agentId referralCode")
+      : await this.agentProfileModel
+          .findOne({ agentId })
+          .select("name agentId referralCode");
+
+    const agentName = agent?.name || "";
+
+    // MATCH LOGIC (SAME AS YOURS)
+
+    const or: any[] = [];
+
+    if (referralCode) {
+      or.push({ referralCode });
+    }
+
+    if (agentId) {
+      or.push({ agentId }, { agentid: agentId }); // keep your existing logic
+    }
+
+    const matchCondition = or.length ? { $or: or } : {};
+
+    // COMMISSION SUMMARY
+
+    const commissionSummary = await this.agentCommissionModel.aggregate([
+      {
+        $match: matchCondition,
+      },
+      {
+        $group: {
+          _id: null,
+          totalCommissionAmount: { $sum: "$commissionAmount" },
+          // optional split
+          paidCommission: {
+            $sum: {
+              $cond: [{ $eq: ["$isPaid", true] }, "$commissionAmount", 0],
+            },
+          },
+          unpaidCommission: {
+            $sum: {
+              $cond: [{ $eq: ["$isPaid", false] }, "$commissionAmount", 0],
+            },
+          },
+        },
+      },
+    ]);
+
+    const summary = commissionSummary[0] || {
+      totalCommissionAmount: 0,
+      paidCommission: 0,
+      unpaidCommission: 0,
+    };
+
+    // FINAL RESPONSE
+
+    return {
+      agentName,
+      referralCode: agent?.referralCode || "",
+      agentId: agent?.agentId || "",
+      ...summary,
+    };
+  }
+
 }

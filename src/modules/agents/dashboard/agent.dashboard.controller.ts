@@ -203,4 +203,22 @@ export class AgentDashboardController {
       data,
     };
   }
+
+  
+  @Get("commissioncount")
+  @UseGuards(AgentJwtAuthGuard)
+  async getCommissioncount(@Req() req: any) {
+    const agentId = req.agent?.agentId ?? "";
+    const referralCode = req.agentReferralCode ?? "";
+
+    const data = await this.agentDashboardService.getCommissioncount(
+      agentId,
+      referralCode,
+    );
+
+    return {
+      message: "Agent dashboard fetched successfully",
+      data,
+    };
+  }
 }
