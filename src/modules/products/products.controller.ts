@@ -94,4 +94,5 @@ export class ProductsController {
   ) {
     return this.productsService.updateProduct(productId, updateProductDto);
   }
+
 }

@@ -142,7 +142,8 @@ export class ProductsService {
           .skip(skip)
           .limit(limit)
           .select("-__v -createdAt -updatedAt")
-          .lean()
+          // Ensure schema defaults are applied when returning lean objects
+          .lean({ defaults: true })
           .exec(),
 
         this.productModel.countDocuments(filter),
@@ -171,7 +172,8 @@ export class ProductsService {
       const product = await this.productModel
         .findById(productId)
         .select("-__v -createdAt -updatedAt")
-        .lean()
+        // Ensure schema defaults are applied when returning lean objects
+        .lean({ defaults: true })
         .exec();
       if (!product) {
         throw new NotFoundException(`Product with ID ${productId} not found`);
@@ -217,7 +219,8 @@ export class ProductsService {
       const product = await this.productModel
         .findOne({ sku })
         .select("-__v -createdAt -updatedAt")
-        .lean()
+        // Ensure schema defaults are applied when returning lean objects
+        .lean({ defaults: true })
         .exec();
 
       if (!product) {

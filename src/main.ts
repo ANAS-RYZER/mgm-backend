@@ -21,7 +21,7 @@ async function bootstrap() {
 
   // Get allowed origins: merge env var with defaults so localhost always works
    const defaultOrigins = [
-    'http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173', 'http://localhost:5174',
+    'http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173', 'http://localhost:5174', 'http://192.168.0.25:3000',
      "https://admin-mgm.vercel.app" , 'https://mgm-agent-form.vercel.app', 'https://mgm-user.vercel.app',"https://partner-mgm.vercel.app"
   ];
   const envOrigins = configService

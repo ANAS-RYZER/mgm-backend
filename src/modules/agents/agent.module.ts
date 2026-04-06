@@ -26,6 +26,9 @@ import { User, UserSchema } from "../users/schemas/user.schema";
 import { Product, ProductSchema } from "../products/schemas/product.schema";
 import { Order, OrderSchema } from "../order/schema/order.schema";
 import { Appointment,AppointmentSchema } from "../appoitment/schema/appointment.schema";
+import { AgentCommission, AgentCommissionSchema } from "./schemas/agent.commission.schema";
+import { AdminCommissionModule } from '../agents/adminCommission/agentCommission.module';
+
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -35,7 +38,8 @@ import { Appointment,AppointmentSchema } from "../appoitment/schema/appointment.
       { name: User.name, schema: UserSchema },
       { name: Product.name, schema: ProductSchema },
       { name: Order.name, schema: OrderSchema },
-      {name : Appointment.name, schema: AppointmentSchema}
+      { name: Appointment.name, schema: AppointmentSchema },
+      { name: AgentCommission.name, schema: AgentCommissionSchema },
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -60,6 +64,7 @@ import { Appointment,AppointmentSchema } from "../appoitment/schema/appointment.
     EmailModule, // Import for EmailService
     RedisModule, // Import for Redis/Session storage
     ConfigModule,
+    AdminCommissionModule,
   ],
   controllers: [AgentController, AgentDashboardController],
   providers: [

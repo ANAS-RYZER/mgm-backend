@@ -23,7 +23,7 @@ export class AddProductDto {
   @IsString()
   @IsNotEmpty()
   name: string;
-
+ 
   @IsOptional()
   @IsString()
   description?: string;
@@ -111,4 +111,10 @@ export class AddProductDto {
   @IsOptional()
   @IsString()
   uploadRefId?: string;
+
+  @IsOptional()
+  @IsNumber()
+  commissionPercentage?: number;
+
+
 }

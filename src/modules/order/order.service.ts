@@ -48,6 +48,8 @@ export class OrderService {
     if (!appointment) {
       throw new NotFoundException("Appointment not found");
     }
+    
+    console.log("create Dto", createDto);
 
     // Create order using appointment data
     const order = await this.orderModel.create({
@@ -72,6 +74,10 @@ export class OrderService {
       { new: true },
     );
 
+    // Create commission record for the agent as soon as order is created.
+    // (Dashboard will then be able to show commission immediately.)
+    await this.createAgentCommission(order);
+
     return {
       orderId: order._id,
       status: order.status,
@@ -83,17 +89,57 @@ export class OrderService {
     // Safety check
     if (!order.totalPrice || !order.userId) return;
 
-    //  Find agent using referralCode stored in order.agentId
+    // Find agent using referralCode OR agentId stored in order.agentId
     const agent = await this.agentProfileModel
-      .findOne({ referralCode: order.agentId })
+      .findOne({
+        $or: [{ referralCode: order.agentId }, { agentId: order.agentId }],
+      })
       .lean()
       .exec();
 
     if (!agent) return;
 
-    const commissionPercentage = 2;
+    // Commission comes from order.breakdown.commission if frontend computed it,
+    // otherwise fall back to product commissionPercentage.
+    const totalPrice = Number(order.totalPrice);
+    const breakdownCommission = order.breakdown?.commission;
 
-    const commissionAmount = (order.totalPrice * commissionPercentage) / 100;
+    let commissionAmount: number | undefined =
+      typeof breakdownCommission === "number" ? breakdownCommission : undefined;
+    let commissionPercentage: number | undefined;
+
+    if (commissionAmount !== undefined && totalPrice > 0) {
+      commissionPercentage = Number(
+        ((commissionAmount / totalPrice) * 100).toFixed(2),
+      );
+      commissionAmount = Number(commissionAmount.toFixed(2));
+    }
+
+    // If breakdown commission is missing, use product commissionPercentage.
+    if (
+      commissionPercentage === undefined ||
+      commissionPercentage === 0 ||
+      commissionAmount === undefined
+    ) {
+      const productSkus = order.productSku ?? [];
+      const products = await this.productModel
+        .find({ sku: { $in: productSkus } })
+        .select("commissionPercentage")
+        .lean()
+        .exec();
+
+      const productPerc = products?.[0]?.commissionPercentage;
+      if (typeof productPerc === "number") {
+        commissionPercentage = productPerc;
+        commissionAmount = Number(
+          ((totalPrice * commissionPercentage) / 100).toFixed(2),
+        );
+      }
+    }
+
+    // Final safety fallback to avoid schema validation errors.
+    commissionPercentage = commissionPercentage ?? 0;
+    commissionAmount = commissionAmount ?? 0;
 
     // Prevent duplicate commission
     const existingCommission = await this.agentCommissionModel.findOne({
@@ -161,44 +207,128 @@ export class OrderService {
     return updatedOrder;
   }
 
-  // Get Single Order
   async findOne(orderId: string) {
-    const order = await this.orderModel
-      .findById(orderId)
-      .populate("appointmentId")
-      .populate("userId", "fullName email avatar")
-      .lean()
-      .exec();
+    const [order] = await this.orderModel.aggregate([
+      {
+        $match: {
+          _id: new Types.ObjectId(orderId),
+        },
+      },
+
+      {
+        $lookup: {
+          from: "users",
+          let: { userId: "$userId" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$_id", { $toObjectId: "$$userId" }],
+                },
+              },
+            },
+            {
+              $project: {
+                fullName: 1,
+                email: 1,
+                avatar: 1,
+              },
+            },
+          ],
+          as: "user",
+        },
+      },
+      {
+        $unwind: {
+
+          path: "$user",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      {
+        $lookup: {
+          from: "appointments",
+          localField: "appointmentId",
+          foreignField: "_id",
+          as: "appointmentDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$appointmentDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      {
+        $lookup: {
+          from: "agentprofiles",
+          let: { agentId: "$agentId" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$referralCode", "$$agentId"] },
+              },
+            },
+            {
+              $project: {
+                name: 1,
+                email: 1,
+                phoneNumber: 1,
+                agentId: 1,
+              },
+            },
+          ],
+          as: "agent",
+        },
+      },
+      {
+        $unwind: {
+          path: "$agent",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      // 🔗 Product Details (by SKU)
+      {
+        $lookup: {
+          from: "products",
+          let: { skus: "$productSku" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $in: ["$sku", "$$skus"] },
+              },
+            },
+            {
+              $project: {
+                name: 1,
+                sku: 1,
+                image: 1,
+                mrpPrice: 1,
+                discountedPrice: 1,
+                quantity: 1,
+              },
+            },
+          ],
+          as: "productDetails",
+        },
+      },
+
+      {
+        $project: {
+          __v: 0,
+          "userDetails.password": 0,
+        },
+      },
+    ]);
 
     if (!order) {
       throw new NotFoundException("Order not found");
     }
 
-    //  Get Agent Details
-    let agentDetails: any = null;
-
-    if (order.agentId) {
-      agentDetails = await this.agentProfileModel
-        .findOne({ referralCode: order.agentId }, "fullName email")
-        .lean()
-        .exec();
-    }
-
-    // Get Product Details using SKU
-    let productDetails: any[] = [];
-
-    if (order.productSku && order.productSku.length > 0) {
-      productDetails = await this.productModel
-        .find({ sku: { $in: order.productSku } })
-        .lean()
-        .exec();
-    }
-
-    return {
-      ...order,
-      agentDetails,
-      productDetails,
-    };
+    return order;
   }
 
   async getAllOrders(search?: string, page = 1, limit = 10) {

@@ -125,6 +125,100 @@ export class AgentDashboardController {
   async getAgent(@Req() req: Request) {
     const agentId = req['agent'].agentId;
     const agent = await this.agentDashboardService.getAgent(agentId);
-    return agent;
+    const commissionSummary =
+      await this.agentDashboardService.getCommissionSummary(agentId);
+    return {
+      agent,
+      commissionSummary,
+    };
+  }
+
+  @Get("commission")
+  @UseGuards(AgentJwtAuthGuard)
+  async getMyCommissions(
+    @Req() req: Request,
+    @Query("page") page: number = 1,
+    @Query("limit") limit: number = 10,
+  ) {
+    const agentId = req["agent"].agentId;
+    return this.agentDashboardService.getMyCommissions(agentId, page, limit);
+  }
+
+  @Get("agent/dashboard")
+  @UseGuards(AgentJwtAuthGuard)
+  async getDashboard(@Req() req: any) {
+    const agentId = req.agent?.agentId ?? "";
+    const referralCode = req.agentReferralCode ?? "";
+
+    const data = await this.agentDashboardService.getAgentDashboard(
+      agentId,
+      referralCode,
+    );
+
+    return {
+      message: "Dashboard fetched successfully",
+      data,
+    };
+  }
+
+  @Get("commissionlist")
+  @UseGuards(AgentJwtAuthGuard)
+  async getDashboardCommission(
+    @Req() req: any,
+    @Query("page") page: number = 1,
+    @Query("limit") limit: number = 10,
+  ) {
+    const agentId = req.agent?.agentId ?? "";
+    const referralCode = req.agentReferralCode ?? "";
+
+    const data = await this.agentDashboardService.getAgentCommission(
+      agentId,
+      referralCode,
+      Number(page),
+      Number(limit),
+    );
+    return {
+      message: "Dashboard fetched successfully",
+      data,
+    };
+  }
+
+  @Get("agentcommission/:orderId")
+  @UseGuards(AgentJwtAuthGuard)
+  async getCommissionDetails(
+    @Req() req: any,
+    @Param("orderId") orderId: string,
+  ) {
+    const agentId = req.agent?.agentId ?? "";
+    const referralCode = req.agentReferralCode ?? "";
+
+    const data = await this.agentDashboardService.getCommissionDetails(
+      orderId,
+      agentId,
+      referralCode,
+    );
+
+    return {
+      message: "Commission details fetched successfully",
+      data,
+    };
+  }
+
+  
+  @Get("commissioncount")
+  @UseGuards(AgentJwtAuthGuard)
+  async getCommissioncount(@Req() req: any) {
+    const agentId = req.agent?.agentId ?? "";
+    const referralCode = req.agentReferralCode ?? "";
+
+    const data = await this.agentDashboardService.getCommissioncount(
+      agentId,
+      referralCode,
+    );
+
+    return {
+      message: "Agent dashboard fetched successfully",
+      data,
+    };
   }
 }

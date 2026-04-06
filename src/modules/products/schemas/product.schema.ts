@@ -21,6 +21,8 @@ export class ColorSchema {
 }
 export const ColorSchemaFactory = SchemaFactory.createForClass(ColorSchema);
 
+
+
 //Stone Details Schema
 @Schema({ _id: false })
 export class StoneDetails {
@@ -41,6 +43,8 @@ export class StoneDetails {
 
   @Prop({ type: ColorSchemaFactory, required: true })
   color: ColorSchema;
+ @Prop({ enum: ["lab-grown", "Natural"], required: true })
+diamondType: "lab-grown" | "Natural";
 }
 export const StoneDetailsSchema = SchemaFactory.createForClass(StoneDetails);
 
@@ -52,6 +56,8 @@ export class GoldSpecs {
 
   @Prop({ required: true })
   goldWeight: number;
+  @Prop({ required: true })
+  netWeight: number;
 
 
 
@@ -73,6 +79,8 @@ export class Product  {
 
   @Prop({ required: true })
   name: string;
+  @Prop({ required: true })
+  material: string;
 
   @Prop()
   description?: string;
@@ -127,6 +135,9 @@ export class Product  {
 
   @Prop({ type: [StoneDetailsSchema] })
   stoneSpecs?: StoneDetails[];
+
+  @Prop({ type: Number, default: 0 })
+  commissionPercentage?: number;
 
   
 }
