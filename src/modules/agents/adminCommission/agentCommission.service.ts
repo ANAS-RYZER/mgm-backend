@@ -1,4 +1,4 @@
-import { Injectable , NotFoundException} from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types } from "mongoose";
 import {
@@ -91,109 +91,165 @@ export class AdminCommissionService {
   }
 
   async getCommissionDetails(orderId: string) {
-  const orderObjectId = new Types.ObjectId(orderId);
+    const orderObjectId = new Types.ObjectId(orderId);
 
-  const data = await this.agentCommissionModel.aggregate([
-    //Match by orderId
-    {
-      $match: {
-        orderId: orderObjectId,
+    const data = await this.agentCommissionModel.aggregate([
+      //Match by orderId
+      {
+        $match: {
+          orderId: orderObjectId,
+        },
       },
-    },
 
-    // Agent lookup
-    {
-      $lookup: {
-        from: "agentprofiles",
-        localField: "agentId",
-        foreignField: "_id",
-        as: "agent",
+      // Agent lookup
+      {
+        $lookup: {
+          from: "agentprofiles",
+          localField: "agentId",
+          foreignField: "_id",
+          as: "agent",
+        },
       },
-    },
-    { $unwind: "$agent" },
+      { $unwind: "$agent" },
 
-    // Order lookup
-    {
-      $lookup: {
-        from: "orders",
-        localField: "orderId",
-        foreignField: "_id",
-        as: "order",
+      // Order lookup
+      {
+        $lookup: {
+          from: "orders",
+          localField: "orderId",
+          foreignField: "_id",
+          as: "order",
+        },
       },
-    },
-    { $unwind: "$order" },
+      { $unwind: "$order" },
 
-    // Product lookup (via SKU array)
-    {
-      $lookup: {
-        from: "products",
-        let: { skus: "$order.productSku" },
-        pipeline: [
-          {
-            $match: {
-              $expr: { $in: ["$sku", "$$skus"] },
+      // Product lookup (via SKU array)
+      {
+        $lookup: {
+          from: "products",
+          let: { skus: "$order.productSku" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $in: ["$sku", "$$skus"] },
+              },
             },
-          },
-          {
-            $project: {
-              _id: 0,
-              name: 1,
-              sku: 1,
-              mrpPrice: 1,
-              image: 1,
+            {
+              $project: {
+                _id: 0,
+                name: 1,
+                sku: 1,
+                mrpPrice: 1,
+                image: 1,
+              },
             },
-          },
-        ],
-        as: "products",
+          ],
+          as: "products",
+        },
       },
-    },
 
-    // Final Response
-    {
-      $project: {
-        _id: 0,
+      // Final Response
+      {
+        $project: {
+          _id: 0,
 
-        // Agent Details
-        agent: {
-          name: "$agent.name",
-          email: "$agent.email",
-          agentId: "$agent.agentId",
-          bankName: "$agent.bankDetails.bankName",
-          accountNumber: {
-                $concat: [
-                    "XXXXXXXXXXX",
+          // Agent Details
+          agent: {
+            name: "$agent.name",
+            email: "$agent.email",
+            agentId: "$agent.agentId",
+            bankName: "$agent.bankDetails.bankName",
+            accountNumber: {
+              $concat: [
+                "XXXXXXXXXXX",
+                {
+                  $substrCP: [
+                    "$agent.bankDetails.accountNumber",
                     {
-                    $substrCP: [
-                        "$agent.bankDetails.accountNumber",
-                        { $subtract: [{ $strLenCP: "$agent.bankDetails.accountNumber" }, 4] },
-                        4
-                    ]
-                    }
-                ]
+                      $subtract: [
+                        { $strLenCP: "$agent.bankDetails.accountNumber" },
+                        4,
+                      ],
+                    },
+                    4,
+                  ],
                 },
-        },
-        // Products
-        products: 1,
+              ],
+            },
+          },
+          // Products
+          products: 1,
 
-        // Order Breakdown
-        breakdown: {
-          baseValue: "$order.breakdown.basePriceTotal",
-          valueAddition: "$order.breakdown.vaTotal",
-          makingCharges: "$order.breakdown.makingTotal",
-          discount: "$order.breakdown.discountTotal",
-          totalAmount: "$order.breakdown.grandTotal",
-        },
+          // Order Breakdown
+          breakdown: {
+            baseValue: "$order.breakdown.basePriceTotal",
+            valueAddition: "$order.breakdown.vaTotal",
+            makingCharges: "$order.breakdown.makingTotal",
+            discount: "$order.breakdown.discountTotal",
+            totalAmount: "$order.breakdown.grandTotal",
+          },
 
-        // Commission
-        commissionAmount: "$commissionAmount",
+          // Commission
+          commissionAmount: "$commissionAmount",
+        },
       },
-    },
-  ]);
+    ]);
 
-  if (!data.length) {
-    throw new NotFoundException("Commission not found");
+    if (!data.length) {
+      throw new NotFoundException("Commission not found");
+    }
+
+    return data[0];
   }
+  async getAgentCommissions(
+    agentId: string,
+    page: number = 1,
+    limit: number = 10,
+    search?: string,
+  ) {
+    if (!Types.ObjectId.isValid(agentId)) {
+      throw new NotFoundException("Invalid agent id");
+    }
 
-  return data[0];
-}
+    const agentObjectId = new Types.ObjectId(agentId);
+    const skip = (page - 1) * limit;
+
+    const query = { agentId: agentObjectId };
+
+    const [items, totalCount] = await Promise.all([
+      this.agentCommissionModel
+        .find(query)
+        .select({
+          orderId: 1,
+          totalOrderAmount: 1,
+          commissionPercentage: 1,
+          commissionAmount: 1,
+          isPaid: 1,
+          referralCode: 1,
+          createdAt: 1,
+          _id: 0,
+        })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+        .exec(),
+
+      this.agentCommissionModel.countDocuments(query),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return {
+      items,
+      pagination: {
+        totalCount,
+        page,
+        limit,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      }
+    };
+  }
 }
