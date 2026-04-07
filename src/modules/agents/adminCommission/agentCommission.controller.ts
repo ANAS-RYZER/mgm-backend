@@ -48,5 +48,14 @@ export class AdminCommissionController {
       success: true,
       data,
     };
-  }  
+  } 
+  @Get("basic/:agentId") 
+  @UseGuards(AdminJwtAuthGuard)
+  async getBasicInfo(@Param("agentId") agentId: string) {
+    const data = await this.adminCommissionService.getBasicInfo(agentId);
+    return {
+      success: true,
+      data,
+    };
+  }
 }
