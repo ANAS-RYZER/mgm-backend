@@ -10,6 +10,7 @@ import { Order, OrderSchema } from "../../order/schema/order.schema";
 import { AdminAuthModule } from "../../admins/admin-auth.module";
 import { AdminCommissionController } from "./agentCommission.controller";
 import { AdminCommissionService } from "./agentCommission.service";
+import { Appointment, AppointmentSchema } from "../../appoitment/schema/appointment.schema";
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { AdminCommissionService } from "./agentCommission.service";
       { name: AgentCommission.name, schema: AgentCommissionSchema },
       { name: AgentProfile.name, schema: AgentProfileSchema },
       { name: Order.name, schema: OrderSchema },
+      {name: Appointment.name, schema: AppointmentSchema},
     ]),
     AdminAuthModule
   ],

@@ -5,12 +5,24 @@ import {
   AgentCommission,
   AgentCommissionDocument,
 } from "../schemas/agent.commission.schema";
+import { AgentProfile, AgentProfileDocument } from "../schemas/agent.profile.schema";
+import { Appointment, AppointmentDocument } from "../../appoitment/schema/appointment.schema";
+import { Order, OrderDocument } from "../../order/schema/order.schema";
 
 @Injectable()
 export class AdminCommissionService {
   constructor(
     @InjectModel(AgentCommission.name)
     private agentCommissionModel: Model<AgentCommissionDocument>,
+
+    @InjectModel(AgentProfile.name)
+    private agentProfileModel: Model<AgentProfileDocument>,
+
+    @InjectModel(Appointment.name)
+    private appointmentModel: Model<AppointmentDocument>,
+
+    @InjectModel(Order.name)
+    private orderModel:Model<OrderDocument>
   ) {}
 
   async getAllCommissions(
@@ -195,5 +207,134 @@ export class AdminCommissionService {
   }
 
   return data[0];
+}
+
+async getAgentDashboard(agentId: string) {
+  const isObjectId = Types.ObjectId.isValid(agentId);
+
+  // ✅ 1. Get Agent
+  const agent = await this.agentProfileModel.findOne(
+    isObjectId
+      ? { _id: new Types.ObjectId(agentId) }
+      : { agentId: agentId.trim().toUpperCase() }
+  ).lean();
+
+  if (!agent) {
+    throw new NotFoundException("Agent not found");
+  }
+
+  // ✅ IMPORTANT: Use referralCode for mapping
+  const referralCode = agent.referralCode;
+
+  // ----------------------------------------
+  // ✅ 2. Total Appointments (FIXED)
+  // ----------------------------------------
+  const totalAppointments = await this.appointmentModel.countDocuments({
+    $or: [{ agentId: referralCode }, { agentid: referralCode }],
+  });
+
+  // ----------------------------------------
+  // ✅ 3. Recent Appointments (FIXED)
+  // ----------------------------------------
+  const recentAppointments = await this.appointmentModel
+    .find({
+      $or: [{ agentId: referralCode }, { agentid: referralCode }],
+    })
+    .sort({ createdAt: -1 })
+    .limit(5)
+    .populate("userId", "fullName email")
+    .lean();
+
+  // ----------------------------------------
+  // ✅ 4. Orders (ASSUMING orders use referralCode)
+  // ----------------------------------------
+  const orders = await this.orderModel.aggregate([
+    {
+      $match: {
+        agentId: referralCode, // ✅ FIXED
+      },
+    },
+    {
+      $lookup: {
+        from: "appointments",
+        localField: "appointmentId",
+        foreignField: "_id",
+        as: "appointment",
+      },
+    },
+    { $unwind: { path: "$appointment", preserveNullAndEmptyArrays: true } },
+    { $sort: { createdAt: -1 } },
+    { $limit: 5 },
+  ]);
+
+  // ----------------------------------------
+  // ✅ 5. Total Orders Count
+  // ----------------------------------------
+  const totalOrders = await this.orderModel.countDocuments({
+    agentId: referralCode, // ✅ FIXED
+  });
+
+  // Total Sales
+
+  const totalSalesAgg = await this.orderModel.aggregate([
+    {
+      $match: { agentId: referralCode }, 
+    },
+    {
+      $group: {
+        _id: null,
+        totalSales: { $sum: "$totalPrice" },
+      },
+    },
+  ]);
+
+  const totalSales = totalSalesAgg[0]?.totalSales || 0;
+
+  // Total Commission (FIXED LOGIC)
+  const totalCommissionAgg = await this.agentCommissionModel.aggregate([
+    {
+      $match: {
+        referralCode: referralCode, 
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        totalCommission: { $sum: "$commissionAmount" },
+      },
+    },
+  ]);
+
+  const totalCommission = totalCommissionAgg[0]?.totalCommission || 0;
+  // FINAL RESPONSE
+  return {
+    agentInfo: {
+      agentId: agent.agentId,
+      name: agent.name,
+      email: agent.email,
+      phoneNumber: agent.phoneNumber,
+      referralCode: agent.referralCode,
+    },
+
+    stats: {
+      totalAppointments,
+      totalOrders,
+      totalSales,
+      totalCommission,
+    },
+
+    recentAppointments: recentAppointments.map((a: any) => ({
+      userName: a.userId?.fullName,
+      email: a.userId?.email,
+      date: a.date,
+      status: a.status,
+    })),
+
+    recentOrders: orders.map((o) => ({
+      orderId: o._id,
+      amount: o.totalPrice,
+      date: o.createdAt,
+    })),
+  };
 }
 }

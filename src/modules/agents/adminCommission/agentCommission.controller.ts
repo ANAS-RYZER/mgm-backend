@@ -27,4 +27,15 @@ export class AdminCommissionController {
     async getCommissionDetails(@Param("orderId") orderId: string) {
     return this.adminCommissionService.getCommissionDetails(orderId);
     }
+
+  @Get("dashboard/:agentId")
+  @UseGuards(AdminJwtAuthGuard)
+  async getDashboard(@Param("agentId") agentId: string) {
+    const data = await this.adminCommissionService.getAgentDashboard(agentId);
+    console.log("data", data)
+    return {
+      success: true,
+      data,
+    };
+  }  
 }
