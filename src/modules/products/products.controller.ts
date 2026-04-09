@@ -37,6 +37,7 @@ export class ProductsController {
   }
   @Get("/all")
   @HttpCode(HttpStatus.OK)
+  @UseGuards(AdminJwtAuthGuard)
   async getAllProducts(
     @Request() req: any,
     @Query("search") search?: string,
@@ -45,8 +46,7 @@ export class ProductsController {
     @Query("page") page = "1",
     @Query("limit") limit = "10",
   ) {
-    const ip =
-      req.headers["x-forwarded-for"] || // real client IP (if behind proxy)
+    const ip =  req.headers["x-forwarded-for"] || // real client IP (if behind proxy)
     console.log("Request object:", req);
 
     console.log("Ip address:", ip);
