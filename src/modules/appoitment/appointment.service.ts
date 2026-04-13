@@ -1,11 +1,12 @@
 import { Injectable, BadRequestException } from "@nestjs/common";
 import { InjectConnection, InjectModel } from "@nestjs/mongoose";
-import { Connection, Model } from "mongoose";
+import { Connection, Model, Types } from "mongoose";
 import { CreateAppointmentDto } from "./dto/appoitment.dto";
 import { Appointment, AppointmentDocument } from "./schema/appointment.schema";
 import { Slot, SlotDocument } from "./schema/slot.schema";
 import { SLOT_TIME_MAP } from "./constant/time.slot";
-import { AppointmentStatus } from '../appoitment/dto/appoitment.dto';
+import { AppointmentStatus } from "../appoitment/dto/appoitment.dto";
+import { createDecipheriv } from "crypto";
 
 @Injectable()
 export class AppoitmentService {
@@ -139,42 +140,105 @@ export class AppoitmentService {
 
   async getAppointmentsByUser(
     userId: string,
-    filter: 'all' | 'upcoming' | 'history',
+    filter: "all" | "upcoming" | "history",
   ) {
     const now = new Date();
 
-    const appointments = await this.appointmentModel
-      .find({ userId: String(userId) })
-      .lean();
+    const pipeline: any[] = [
+      {
+        $match: {
+          userId: userId,
+        },
+      },
 
-    const formatted = appointments.map((appt) => {
-      const dateTime = new Date(`${appt.date}T${appt.slotStartTime}`);
-      return {
-        ...appt,
-        dateTime,
-      };
+      // Create dateTime
+      {
+        $addFields: {
+          dateTime: {
+            $dateFromString: {
+              dateString: {
+                $concat: ["$date", "T", "$slotStartTime"],
+              },
+            },
+          },
+        },
+      },
+
+      // Convert string[] → ObjectId[]
+      {
+        $addFields: {
+          productObjectIds: {
+            $map: {
+              input: "$productIds",
+              as: "pid",
+              in: { $toObjectId: "$$pid" },
+            },
+          },
+        },
+      },
+
+      // Lookup products
+      {
+        $lookup: {
+          from: "products",
+          localField: "productObjectIds",
+          foreignField: "_id",
+          as: "products",
+        },
+      },
+
+      // Keep only required product fields
+      {
+        $addFields: {
+          products: {
+            $map: {
+              input: "$products",
+              as: "p",
+              in: {
+                name: "$$p.name",
+                sku: "$$p.sku",
+                mrpPrice: "$$p.mrpPrice",
+                image: "$$p.image",
+              },
+            },
+          },
+        },
+      },
+    ];
+
+    // 🔥 Filters
+    if (filter === "upcoming") {
+      pipeline.push({
+        $match: {
+          dateTime: { $gt: now },
+          status: { $ne: "CANCELLED" },
+        },
+      });
+    }
+
+    if (filter === "history") {
+      pipeline.push({
+        $match: {
+          dateTime: { $lt: now },
+        },
+      });
+    }
+
+    // 🧹 Clean response
+    pipeline.push({
+      $project: {
+        __v: 0,
+        createdAt: 0,
+        updatedAt: 0,
+        agentid: 0,
+        productObjectIds: 0,
+        productIds:0,
+      },
     });
 
-    let result: typeof formatted = []; 
 
-    if (filter === 'all') {
-      result = formatted;
-    }
-
-    if (filter === 'upcoming') {
-      result = formatted.filter(
-        (appt) =>
-          appt.dateTime > now &&
-          appt.status !== 'CANCELLED'
-      );
-    }
-
-    if (filter === 'history') {
-      result = formatted.filter(
-        (appt) => appt.dateTime < now
-      );
-    }
-
+    const result = await this.appointmentModel.aggregate(pipeline);
+   console.log(result, "user appointments");
     return {
       success: true,
       count: result.length,
@@ -182,4 +246,3 @@ export class AppoitmentService {
     };
   }
 }
-
