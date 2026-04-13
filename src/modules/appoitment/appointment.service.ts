@@ -5,6 +5,7 @@ import { CreateAppointmentDto } from "./dto/appoitment.dto";
 import { Appointment, AppointmentDocument } from "./schema/appointment.schema";
 import { Slot, SlotDocument } from "./schema/slot.schema";
 import { SLOT_TIME_MAP } from "./constant/time.slot";
+import { AppointmentStatus } from '../appoitment/dto/appoitment.dto';
 
 @Injectable()
 export class AppoitmentService {
@@ -135,4 +136,50 @@ export class AppoitmentService {
   notifyAdmin(appointment: any) {
     console.log("🔔 New Store Appointment", appointment);
   }
+
+  async getAppointmentsByUser(
+    userId: string,
+    filter: 'all' | 'upcoming' | 'history',
+  ) {
+    const now = new Date();
+
+    const appointments = await this.appointmentModel
+      .find({ userId: String(userId) })
+      .lean();
+
+    const formatted = appointments.map((appt) => {
+      const dateTime = new Date(`${appt.date}T${appt.slotStartTime}`);
+      return {
+        ...appt,
+        dateTime,
+      };
+    });
+
+    let result: typeof formatted = []; 
+
+    if (filter === 'all') {
+      result = formatted;
+    }
+
+    if (filter === 'upcoming') {
+      result = formatted.filter(
+        (appt) =>
+          appt.dateTime > now &&
+          appt.status !== 'CANCELLED'
+      );
+    }
+
+    if (filter === 'history') {
+      result = formatted.filter(
+        (appt) => appt.dateTime < now
+      );
+    }
+
+    return {
+      success: true,
+      count: result.length,
+      data: result,
+    };
+  }
 }
+

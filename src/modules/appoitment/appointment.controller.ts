@@ -23,4 +23,20 @@ export class AppoitmentController {
     console.log(userId , "user id")
     return this.service.createAppointment(dto , userId);
   }
+
+  @Get()
+@UseGuards(JwtAuthGuard)
+async getUserAppointments(
+  @Req() req: any,
+  @Query('filter') filter: string = 'all',
+) {
+  const userId = req.user?.userId;
+
+  const cleanFilter = (filter || 'all').trim().toLowerCase() as
+    | 'all'
+    | 'upcoming'
+    | 'history';
+
+  return this.service.getAppointmentsByUser(userId, cleanFilter);
+}
 }
