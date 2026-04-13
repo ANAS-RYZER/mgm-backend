@@ -17,7 +17,7 @@ export class WishlistController {
 
   // Toggle wishlist
   @Put('toggle')
-  // @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(OptionalJwtAuthGuard)
   async toggleWishlist(
     @Query('productId') productId: string,
     @Req() req: any,
