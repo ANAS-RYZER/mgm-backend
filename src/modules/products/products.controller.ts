@@ -13,6 +13,7 @@ import {
   UseGuards,
   UseInterceptors,
   Request,
+  Delete,
 } from "@nestjs/common";
 import { ProductsService } from "./products.service";
 import { AddProductDto } from "./dto/add.product.dto";
@@ -94,6 +95,13 @@ export class ProductsController {
     @Body() updateProductDto: UpdateProductDto,
   ) {
     return this.productsService.updateProduct(productId, updateProductDto);
+  }
+
+  @Delete('/delete/:id')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AdminJwtAuthGuard)
+  async deleteProduct(@Param('id') productId: string) {
+    return this.productsService.deleteProduct(productId);
   }
 
 }

@@ -108,7 +108,7 @@ export class AppoitmenDatatService {
         },
       },
 
-      { $sort: { date: 1, slotStartTime: 1 } },
+      { $sort: { date: -1, slotStartTime: -1 } },
 
       {
         $facet: {
