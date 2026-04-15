@@ -294,4 +294,20 @@ export class ProductsService {
       throw new InternalServerErrorException("Failed to retrieve product");
     }
   }
+
+  async deleteProduct(productId: string): Promise<{ success: boolean }> {
+    try{
+      const deleted = await this.productModel.findByIdAndDelete(productId).exec();
+      if(!deleted){
+        throw new NotFoundException(`Product with ID ${productId} not found`);
+      }
+      return { success: true };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException("Failed to delete product");
+
+    }
+  }
 }
