@@ -11,4 +11,17 @@ export class UsersController {
     const userId = req.user?.userId;
     return this.usersService.getProfile(userId);
   }
+  @Get("/dashboard")
+  @UseGuards(JwtAuthGuard)
+  async getUserDashboard(@Request() req) {
+    const userId = req.user?.userId;
+    return await this.usersService.getUserDashboard(userId);
+  }
+
+  @Get("/wishlist")
+  @UseGuards(JwtAuthGuard)
+  async getMyWishlist(@Request() req) {
+    const userId = req.user?.userId;
+    return await this.usersService.getMyWishlist(userId); 
+  }
 }

@@ -8,6 +8,8 @@ export class GoldSpecsDto {
 
   @IsNumber()
   goldWeight: number;
+  @IsNumber()
+  netWeight: number;
 
  
 

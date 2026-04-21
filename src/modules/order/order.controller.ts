@@ -38,6 +38,7 @@ export class OrderController {
 
   //  Update Order
   @Put(":id")
+  @HttpCode(HttpStatus.OK)
   @UseGuards(AdminJwtAuthGuard)
   async update(@Param("id") id: string, @Body() updateDto: UpdateOrderDto) {
     const order = await this.orderService.update(id, updateDto);
@@ -51,6 +52,7 @@ export class OrderController {
 
   // ✅ Get Single Order
   @Get(":id")
+  @HttpCode(HttpStatus.OK)
   @UseGuards(AdminJwtAuthGuard)
   async findOne(@Param("id") id: string) {
     const order = await this.orderService.findOne(id);
@@ -64,13 +66,18 @@ export class OrderController {
 
   // get all orders
   @Get()
+  @HttpCode(HttpStatus.OK)
   @UseGuards(AdminJwtAuthGuard)
   async getAllOrders(
     @Query("search") search?: string,
     @Query("page") page = "1",
     @Query("limit") limit = "10",
   ) {
-    const orders =  await this.orderService.getAllOrders(search, Number(page), Number(limit));
+    const orders = await this.orderService.getAllOrders(
+      search,
+      Number(page),
+      Number(limit),
+    );
     return {
       success: true,
       message: "Orders fetched successfully",

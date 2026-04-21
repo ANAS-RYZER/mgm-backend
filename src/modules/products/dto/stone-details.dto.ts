@@ -20,14 +20,14 @@ export class StoneDetailsDto {
   @IsOptional()
   @IsString()
   type?: StoneType;
-
+  
+  @Type(() => ColorDto)
   @Transform(({ value }) =>
     typeof value === "string"
       ? { type: "DIAMOND" as const, value }
       : value,
   )
   @ValidateNested()
-  @Type(() => ColorDto)
   color: ColorDto;
 
   @IsOptional()

@@ -452,9 +452,7 @@ export class AgentDashboardService {
     agentId: string,
     referralCode: string,
   ) {
-    // =============================
-    // ✅ AGENT DETAILS
-    // =============================
+    //  AGENT DETAILS
     const agent = referralCode
       ? await this.agentProfileModel
           .findOne({ referralCode })
@@ -465,126 +463,184 @@ export class AgentDashboardService {
 
     const agentName = agent?.name || "";
 
-    // =============================
-    // COMMON MATCH LOGIC
-    // =============================
+    // MATCH LOGIC
     const or: any[] = [];
 
     if (referralCode) {
-      or.push(
-        { referralCode },
-        { agentId: referralCode },
-        { agentid: referralCode },
-      );
+      or.push({ referralCode });
     }
 
-    if (!referralCode && agentId) {
+    if (agentId) {
       or.push({ agentId }, { agentid: agentId });
     }
 
     const matchCondition = or.length ? { $or: or } : {};
 
-    // =============================
-    // TOTAL APPOINTMENTS
-    // =============================
-    const totalAppointments =
-      await this.appointmentModel.countDocuments(matchCondition);
+    // APPOINTMENT STATS (OPTIMIZED)
+    const stats = await this.appointmentModel.aggregate([
+      { $match: matchCondition },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
 
-    // =============================
-    // TOTAL CUSTOMERS (REFERRAL BASED)
-    // =============================
+          confirmed: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "CONFIRMED"] }, 1, 0],
+            },
+          },
+
+          visited: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "ISVISITED"] }, 1, 0],
+            },
+          },
+
+          purchased: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "ISPURCHASED"] }, 1, 0],
+            },
+          },
+
+          notVisited: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "NOTVISITED"] }, 1, 0],
+            },
+          },
+        },
+      },
+    ]);
+
+    const totalAppointments = stats[0]?.total || 0;
+    const confirmedCount = stats[0]?.confirmed || 0;
+    const visitedCount = stats[0]?.visited || 0;
+    const purchasedCount = stats[0]?.purchased || 0;
+    const notVisitedCount = stats[0]?.notVisited || 0;
+
+    //  VISITED RATE (VISITED + PURCHASED)
+    const visitedRate =
+      totalAppointments > 0
+        ? Math.round(
+            ((visitedCount + purchasedCount) / totalAppointments) * 100,
+          )
+        : 0;
+
+    // TOTAL CUSTOMERS
+
     const totalCustomers = referralCode
       ? await this.userModel.countDocuments({ refId: referralCode })
       : 0;
 
-    // =============================
-    // VISITED RATE
-    // =============================
-    const visitedCount =
-      await this.appointmentModel.countDocuments({
-        ...matchCondition,
-        status: "ISVISITED",
-      });
+    // TOTAL EARNINGS
 
-    const visitedRate =
-      totalAppointments > 0
-        ? Math.round((visitedCount / totalAppointments) * 100)
-        : 0;
-
-    // =============================
-    // STATUS STATS
-    // =============================
-    const statusAgg = await this.appointmentModel.aggregate([
-      { $match: matchCondition },
+    const earningsAgg = await this.agentCommissionModel.aggregate([
+      {
+        $match: {
+          ...(referralCode ? { referralCode } : {}),
+        },
+      },
       {
         $group: {
-          _id: "$status",
-          count: { $sum: 1 },
+          _id: null,
+          totalEarnings: { $sum: "$commissionAmount" },
         },
       },
     ]);
 
-    const appointmentStatus = {
-      total: 0,
-      confirmed: 0,
-      visited: 0,
-      purchased: 0,
-      notVisited: 0,
-    };
+    const totalEarnings = earningsAgg[0]?.totalEarnings || 0;
 
-    statusAgg.forEach((s) => {
-      appointmentStatus.total += s.count;
+    // MONTHLY EARNINGS
 
-      if (s._id === "CONFIRMED") appointmentStatus.confirmed = s.count;
-      if (s._id === "ISVISITED") appointmentStatus.visited = s.count;
-      if (s._id === "ISPURCHASED") appointmentStatus.purchased = s.count;
-      if (s._id === "NOTVISITED") appointmentStatus.notVisited = s.count;
-    });
-
-    // =============================
-    // ✅ RECENT APPOINTMENTS (TOP 5)
-    // =============================
-    const recentAppointments = await this.appointmentModel.aggregate([
+    const monthlyAgg = await this.agentCommissionModel.aggregate([
       {
-        $match: matchCondition,
-      },
-
-      {
-        $lookup: {
-          from: "users",
-          localField: "userId",
-          foreignField: "_id",
-          as: "user",
+        $match: {
+          ...(referralCode ? { referralCode } : {}),
         },
       },
-
       {
-        $unwind: {
-          path: "$user",
-          preserveNullAndEmptyArrays: true, // prevent data loss
-        },
-      },
-
-      {
-        $project: {
-          _id: 1,
-          customerName: "$user.fullName",
-          date: 1,
-          slot: {
-            $concat: ["$slotStartTime", " - ", "$slotEndTime"],
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" },
           },
-          status: 1,
-          createdAt: 1,
+          total: { $sum: "$commissionAmount" },
         },
       },
-
-      { $sort: { createdAt: -1 } },
-      { $limit: 5 },
+      {
+        $sort: {
+          "_id.year": 1,
+          "_id.month": 1,
+        },
+      },
     ]);
 
-    // =============================
-    // ✅ RECENT CUSTOMERS (REFERRAL BASED)
-    // =============================
+    const monthNames = [
+      "",
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+
+    const monthlyEarnings = monthlyAgg.map((item) => ({
+      year: item._id.year,
+      month: monthNames[item._id.month],
+      earnings: item.total,
+    }));
+
+    // RECENT APPOINTMENTS
+
+    const recentAppointments = await this.appointmentModel.aggregate([
+        { $match: matchCondition },
+        // Convert userId string → ObjectId
+        {
+          $addFields: {
+            userIdObj: { $toObjectId: "$userId" },
+          },
+        },
+
+        {
+          $lookup: {
+            from: "users",
+            localField: "userIdObj",
+            foreignField: "_id",
+            as: "user",
+          },
+        },
+
+        {
+          $unwind: {
+            path: "$user",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+
+        {
+          $project: {
+            _id: 1,
+            customerName: "$user.fullName",
+            date: 1,
+            slot: {
+              $concat: ["$slotStartTime", " - ", "$slotEndTime"],
+            },
+            status: 1,
+            createdAt: 1,
+          },
+        },
+
+        { $sort: { createdAt: -1 } },
+        { $limit: 5 },
+      ]);
+    // RECENT CUSTOMERS
+
     const recentCustomers = referralCode
       ? await this.userModel
           .find({ refId: referralCode })
@@ -593,14 +649,372 @@ export class AgentDashboardService {
           .select("fullName email createdAt")
       : [];
 
+    //  FINAL RESPONSE
     return {
       agentName,
+      totalEarnings,
       totalCustomers,
       totalAppointments,
       visitedRate,
-      appointmentStatus,
+      appointmentStatus: {
+        total: totalAppointments,
+        confirmed: confirmedCount,
+        visited: visitedCount,
+        purchased: purchasedCount,
+        notVisited: notVisitedCount,
+      },
+      monthlyEarnings,
       recentAppointments,
       recentCustomers,
+    };
+  }
+
+  async getAgentCommission(
+    agentId: string,
+    referralCode: string,
+    page: number = 1,
+    limit: number = 10,
+    search?: string,
+  ) {
+
+    // AGENT DETAILS
+    const agent = referralCode
+      ? await this.agentProfileModel
+          .findOne({ referralCode })
+          .select('name agentId referralCode')
+      : await this.agentProfileModel
+          .findOne({ agentId })
+          .select('name agentId referralCode');
+
+    const agentName = agent?.name || '';
+
+
+    // MATCH LOGIC
+
+    const or: any[] = [];
+
+    if (referralCode) {
+      or.push({ referralCode });
+    }
+
+    if (agentId) {
+      or.push({ agentId }, { agentid: agentId });
+    }
+
+    const matchCondition = or.length ? { $or: or } : {};
+
+    //  PAGINATION
+
+    const skip = (page - 1) * limit;
+
+
+    // BASE PIPELINE
+
+    const pipeline: any[] = [
+      {
+        $match: matchCondition,
+      },
+
+      {
+        $addFields: {
+          userId: {
+            $cond: {
+              if: { $eq: [{ $type: "$userId" }, "string"] },
+              then: { $toObjectId: "$userId" },
+              else: "$userId",
+            },
+          },
+        },
+      },
+
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      {
+        $unwind: {
+          path: '$user',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+    ];
+
+    // SEARCH (NAME + EMAIL)
+
+    if (search) {
+      pipeline.push({
+        $match: {
+          $or: [
+            { 'user.fullName': { $regex: search, $options: 'i' } },
+            { 'user.email': { $regex: search, $options: 'i' } },
+          ],
+        },
+      });
+    }
+
+    // FINAL PROJECTION
+    pipeline.push(
+      {
+        $addFields: {
+          customerName: { $ifNull: ['$user.fullName', ''] },
+          customerEmail: { $ifNull: ['$user.email', ''] },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          orderId: 1,
+          commissionAmount: 1,
+          createdAt: 1,
+          customerName: 1,
+          customerEmail: 1,
+        },
+      },
+      {
+        $sort: { createdAt: -1 },
+      },
+      {
+        $skip: skip,
+      },
+      {
+        $limit: limit,
+      },
+    );
+
+    // EXECUTE QUERY
+    const commissions = await this.agentCommissionModel.aggregate(pipeline);
+
+    // TOTAL COUNT (WITH SEARCH)
+
+    const countPipeline: any[] = [
+      { $match: matchCondition },
+
+      {
+        $addFields: {
+          userId: {
+            $cond: {
+              if: { $eq: [{ $type: "$userId" }, "string"] },
+              then: { $toObjectId: "$userId" },
+              else: "$userId",
+            },
+          },
+        },
+      },
+
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      {
+        $unwind: {
+          path: '$user',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+    ];
+
+    if (search) {
+      countPipeline.push({
+        $match: {
+          $or: [
+            { 'user.fullName': { $regex: search, $options: 'i' } },
+            { 'user.email': { $regex: search, $options: 'i' } },
+          ],
+        },
+      });
+    }
+
+    countPipeline.push({ $count: 'total' });
+
+    const countResult = await this.agentCommissionModel.aggregate(countPipeline);
+    const totalCount = countResult[0]?.total || 0;
+
+    // FINAL RESPONSE
+    return {
+      agentName,
+      referralCode: agent?.referralCode || '',
+      commissions,
+      pagination: {
+        totalCount,
+        currentPage: page,
+        totalPages: Math.ceil(totalCount / limit),
+        limit,
+      },
+    };
+  }
+
+  async getCommissionDetails(
+    orderId: string,
+    agentId: string,
+    referralCode: string,
+  ) {
+    const or: any[] = [];
+    if (referralCode) {
+      or.push({ referralCode });
+    }
+    if (agentId) {
+      or.push({ agentId }, { agentid: agentId });
+    }
+    const matchCondition = or.length ? { $or: or } : {};
+    // AGGREGATION
+    const result = await this.agentCommissionModel.aggregate([
+      {
+        $match: {
+          orderId: new Types.ObjectId(orderId),
+          ...matchCondition,
+        },
+      },
+      //  USER JOIN
+      {
+        $addFields: {
+          userIdObj: {
+            $cond: {
+              if: { $eq: [{ $type: "$userId" }, "objectId"] },
+              then: "$userId",
+              else: { $toObjectId: "$userId" },
+            },
+          },
+        },
+      },
+      // USER JOIN
+      {
+        $lookup: {
+          from: "users",
+          localField: "userIdObj",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+      // ORDER JOIN
+      {
+        $lookup: {
+          from: "orders",
+          localField: "orderId",
+          foreignField: "_id",
+          as: "order",
+        },
+      },
+      { $unwind: { path: "$order", preserveNullAndEmptyArrays: true } },
+      // PRODUCT JOIN (using SKU array)
+      {
+        $lookup: {
+          from: "products",
+          localField: "order.productSku",
+          foreignField: "sku",
+          as: "products",
+        },
+      },
+      //  FINAL FORMAT
+      {
+        $project: {
+          _id: 0,
+          // Commission
+          orderId: 1,
+          commissionAmount: 1,
+          createdAt: 1,
+          // Customer
+          customerName: { $ifNull: ["$user.fullName", ""] },
+          customerEmail: { $ifNull: ["$user.email", ""] },
+          // Order Breakdown
+          breakdown: {
+              baseValue: { $round: [{ $ifNull: ["$order.breakdown.basePriceTotal", 0] }, 2] },
+              valueAddition: { $round: [{ $ifNull: ["$order.breakdown.vaTotal", 0] }, 2] },
+              makingCharges: { $round: [{ $ifNull: ["$order.breakdown.makingTotal", 0] }, 2] },
+              discount: { $round: [{ $ifNull: ["$order.breakdown.discountTotal", 0] }, 2] },
+              totalAmount: { $round: [{ $ifNull: ["$order.breakdown.grandTotal", 0] }, 2] },
+            },
+          // Products
+          products: {
+            $map: {
+              input: "$products",
+              as: "p",
+              in: {
+                name: "$$p.name",
+                sku: "$$p.sku",
+                image: "$$p.image",
+                price:"$$p.mrpPrice",
+              },
+            },
+          },
+        },
+      },
+    ]);
+
+    return result[0] || {};
+  }
+
+  async getCommissioncount(agentId: string, referralCode: string) {
+    const agent = referralCode
+      ? await this.agentProfileModel
+          .findOne({ referralCode })
+          .select("name agentId referralCode")
+      : await this.agentProfileModel
+          .findOne({ agentId })
+          .select("name agentId referralCode");
+
+    const agentName = agent?.name || "";
+
+    // MATCH LOGIC (SAME AS YOURS)
+
+    const or: any[] = [];
+
+    if (referralCode) {
+      or.push({ referralCode });
+    }
+
+    if (agentId) {
+      or.push({ agentId }, { agentid: agentId }); // keep your existing logic
+    }
+
+    const matchCondition = or.length ? { $or: or } : {};
+
+    // COMMISSION SUMMARY
+
+    const commissionSummary = await this.agentCommissionModel.aggregate([
+      {
+        $match: matchCondition,
+      },
+      {
+        $group: {
+          _id: null,
+          totalCommissionAmount: { $sum: "$commissionAmount" },
+          // optional split
+          paidCommission: {
+            $sum: {
+              $cond: [{ $eq: ["$isPaid", true] }, "$commissionAmount", 0],
+            },
+          },
+          unpaidCommission: {
+            $sum: {
+              $cond: [{ $eq: ["$isPaid", false] }, "$commissionAmount", 0],
+            },
+          },
+        },
+      },
+    ]);
+
+    const summary = commissionSummary[0] || {
+      totalCommissionAmount: 0,
+      paidCommission: 0,
+      unpaidCommission: 0,
+    };
+
+    // FINAL RESPONSE
+
+    return {
+      agentName,
+      referralCode: agent?.referralCode || "",
+      agentId: agent?.agentId || "",
+      ...summary,
     };
   }
 
