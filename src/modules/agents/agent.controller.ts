@@ -43,8 +43,8 @@ export class AgentController {
   @Get("/applications")
   @HttpCode(HttpStatus.OK)
   @UseGuards(AdminJwtAuthGuard)
-  async getAllApplications(@Query("status") status?: AgentStatus) {
-    const agents = await this.agentService.getAllApplications(status);
+  async getAllApplications(@Query("status") status?: AgentStatus, @Query("search") search?: string) {
+    const agents = await this.agentService.getAllApplications(status, search);
     return {
       message: "Agents fetched successfully",
       data: agents,

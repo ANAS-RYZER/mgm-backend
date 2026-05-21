@@ -26,6 +26,7 @@ import {
   AgentProfile,
   AgentProfileDocument,
 } from "./schemas/agent.profile.schema";
+import { stat } from "fs";
 
 @Injectable()
 export class AgentService {
@@ -81,8 +82,17 @@ export class AgentService {
   }
 
   // Get all agents (for admin)
-  async getAllApplications(status?: AgentStatus): Promise<Agent[]> {
-    const filter = status ? { status } : {};
+  async getAllApplications(status?: AgentStatus, search?: string): Promise<Agent[]> {
+    const filter: any = {};
+    if (search) {
+      const regex = new RegExp(search, "i");
+      filter.$or = [
+        { name: regex },
+        { email: regex },
+        { phoneNumber: regex },
+        { status: regex },
+      ];
+    }
     return this.agentModel
       .find(filter)
       .select("-password -bankDetails -governmentId -createdAt -updatedAt ")
