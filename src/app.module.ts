@@ -19,6 +19,7 @@ import {
 AppoitmentModule
 } from './modules/appoitment/appointment.module'
 import { OrderModule } from './modules/order/order.module';
+import { AdminDashboardModule } from './modules/admins/dashboard/admin-dashboard.module';
 
 @Module({
   imports: [
@@ -39,7 +40,8 @@ import { OrderModule } from './modules/order/order.module';
     UserRequestsModule,
     PriceModule,
     AppoitmentModule,
-    OrderModule
+    OrderModule,
+    AdminDashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],
