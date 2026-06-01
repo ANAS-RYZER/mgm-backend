@@ -7,7 +7,7 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
-import { Model } from "mongoose";
+import { Model, Types } from "mongoose";
 import { Product, ProductDocument } from "./schemas/product.schema";
 import { AddProductDto } from "./dto/add.product.dto";
 import { Categories } from "./interfaces/product.interface";
@@ -102,6 +102,7 @@ export class ProductsService {
     sortPrice?: "asc" | "desc",
     page = 1,
     limit = 10,
+    userId?: string,
   ): Promise<{
     products: Product[];
     page: number;
@@ -117,35 +118,90 @@ export class ProductsService {
     if (search?.trim()) {
       const regex = new RegExp(search.trim(), "i");
 
-      filter.$or = [
-        { name: regex },
-        { sku: regex },
-        { categories: regex },  
-      ];
+      filter.$or = [{ name: regex }, { sku: regex }, { categories: regex }];
     }
 
     if (category) {
       filter.categories = category;
     }
 
-    const sort: any = {};
-    if (sortPrice === "asc") sort.mrpPrice = 1;
-    if (sortPrice === "desc") sort.mrpPrice = -1;
-
     const skip = (page - 1) * limit;
 
     try {
-      const [products, totalCount] = await Promise.all([
-        this.productModel
-          .find(filter)
-          .sort(sort)
-          .skip(skip)
-          .limit(limit)
-          .select("-__v -createdAt -updatedAt")
-          // Ensure schema defaults are applied when returning lean objects
-          .lean({ defaults: true })
-          .exec(),
+      const pipeline: any[] = [
+        { $match: filter },
 
+        ...(userId && Types.ObjectId.isValid(userId)
+          ? [
+              {
+                $lookup: {
+                  from: "wishlists",
+                  let: { productId: "$_id" },
+                  pipeline: [
+                    {
+                      $match: {
+                        $expr: {
+                          $and: [
+                            { $eq: ["$productId", "$$productId"] },
+                            {
+                              $eq: ["$userId", new Types.ObjectId(userId)],
+                            },
+                          ],
+                        },
+                      },
+                    },
+                  ],
+                  as: "wishlistData",
+                },
+              },
+              {
+                $addFields: {
+                  isWishlisted: {
+                    $gt: [{ $size: "$wishlistData" }, 0],
+                  },
+                },
+              },
+              {
+                $project: {
+                  wishlistData: 0,
+                },
+              },
+            ]
+          : [
+              {
+                $addFields: {
+                  isWishlisted: false,
+                },
+              },
+            ]),
+
+        // 🔥 Sorting
+        ...(sortPrice
+          ? [
+              {
+                $sort: {
+                  mrpPrice: sortPrice === "asc" ? 1 : -1,
+                },
+              },
+            ]
+          : []),
+
+        // 🔥 Pagination
+        { $skip: skip },
+        { $limit: limit },
+
+        // 🔥 Remove unwanted fields
+        {
+          $project: {
+            __v: 0,
+            createdAt: 0,
+            updatedAt: 0,
+          },
+        },
+      ];
+
+      const [products, totalCount] = await Promise.all([
+        this.productModel.aggregate(pipeline),
         this.productModel.countDocuments(filter),
       ]);
 
@@ -213,7 +269,6 @@ export class ProductsService {
     }
   }
 
-
   async getProductBySku(sku: string): Promise<Product> {
     try {
       const product = await this.productModel
@@ -240,4 +295,19 @@ export class ProductsService {
     }
   }
 
+  async deleteProduct(productId: string): Promise<{ success: boolean }> {
+    try{
+      const deleted = await this.productModel.findByIdAndDelete(productId).exec();
+      if(!deleted){
+        throw new NotFoundException(`Product with ID ${productId} not found`);
+      }
+      return { success: true };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException("Failed to delete product");
+
+    }
+  }
 }

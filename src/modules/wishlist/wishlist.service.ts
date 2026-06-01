@@ -82,85 +82,71 @@ export class WishlistService {
     }
 
     const pipeline: any[] = [
-      //  Match logged-in user's wishlist
-      {
-        $match: {
-          userId: new Types.ObjectId(userId),
-        },
-      },
+  {
+    $match: {
+      userId: new Types.ObjectId(userId),
+    },
+  },
 
-      //  Lookup Product
-      {
-        $lookup: {
-          from: 'products',
-          localField: 'productId',
-          foreignField: '_id',
-          as: 'product',
-        },
-      },
-      { $unwind: '$product' },
+  // product join
+  {
+    $lookup: {
+      from: 'products',
+      localField: 'productId',
+      foreignField: '_id',
+      as: 'product',
+    },
+  },
+  { $unwind: '$product' },
 
-      //  Optional category filter
-      ...(category
-        ? [{ $match: { 'product.categories': category } }]
-        : []),
+  // optional category
+  ...(category
+    ? [{ $match: { 'product.categories': category } }]
+    : []),
 
-      //  All wishlists on this product
-      {
-        $lookup: {
-          from: 'wishlists',
-          localField: 'product._id',
-          foreignField: 'productId',
-          as: 'allWishlists',
-        },
-      },
-
-      // Users who wishlisted this product
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'allWishlists.userId',
-          foreignField: '_id',
-          as: 'users',
-        },
-      },
-
-      // Simplify users (FULL NAME FIXED)
-      {
-        $addFields: {
-          users: {
-            $map: {
-              input: '$users',
-              as: 'u',
-              in: {
-                _id: { $toString: '$$u._id' },
-                fullName: { $ifNull: ['$$u.fullName', ''] },
-                avatar: { $ifNull: ['$$u.avatar', null] },
-              },
+  // ✅ check wishlist (real, not hardcoded)
+  {
+    $lookup: {
+      from: 'wishlists',
+      let: { productId: '$product._id' },
+      pipeline: [
+        {
+          $match: {
+            $expr: {
+              $and: [
+                { $eq: ['$productId', '$$productId'] },
+                { $eq: ['$userId', new Types.ObjectId(userId)] },
+              ],
             },
           },
         },
+      ],
+      as: 'wishlistCheck',
+    },
+  },
+
+  // ✅ final shape (minimal)
+  {
+    $project: {
+      
+      _id: { $toString: '$product._id' },
+      name: '$product.name',
+      sku: '$product.sku',
+      mrpPrice: '$product.mrpPrice',
+      metal: '$product.goldSpecs.karat',
+      image: '$product.image',
+      images: '$product.gallery',
+
+      isWishListed: {
+        $gt: [{ $size: '$wishlistCheck' }, 0],
       },
 
-      //  Final response shape
-      {
-        $replaceRoot: {
-          newRoot: {
-            $mergeObjects: [
-              '$product',
-              {
-                wishlistId: '$_id',
-                productId: '$product._id',
-                isWishlisted: true,
-                users: '$users',
-              },
-            ],
-          },
-        },
-      },
+      createdAt: '$createdAt',
+    },
+  },
 
-      { $sort: { createdAt: -1 } },
-    ];
+  { $sort: { createdAt: -1 } },
+];
 
     const skip = (page - 1) * limit;
 
