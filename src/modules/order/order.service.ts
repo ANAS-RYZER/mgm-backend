@@ -432,6 +432,7 @@ export class OrderService {
             in: {
               name: "$$p.name",
               sku: "$$p.sku",
+              image: "$$p.image",
             },
           },
         },
