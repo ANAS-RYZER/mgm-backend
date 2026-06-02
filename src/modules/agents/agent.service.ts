@@ -26,6 +26,7 @@ import {
   AgentProfile,
   AgentProfileDocument,
 } from "./schemas/agent.profile.schema";
+import { stat } from "fs";
 
 @Injectable()
 export class AgentService {
@@ -81,13 +82,47 @@ export class AgentService {
   }
 
   // Get all agents (for admin)
-  async getAllApplications(status?: AgentStatus): Promise<Agent[]> {
+  async getAllApplications(
+    status?: AgentStatus,
+    page = 1,
+    limit = 10,
+  ): Promise<{
+    agents: Agent[];
+    page: number;
+    limit: number;
+    currentPage: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+    totalCount: number;
+    totalPages: number;
+  }> {
     const filter = status ? { status } : {};
-    return this.agentModel
-      .find(filter)
-      .select("-password -bankDetails -governmentId -createdAt -updatedAt ")
-      .lean()
-      .sort({ createdAt: -1 });
+    const skip = (page - 1) * limit;
+
+    const [agents, totalCount] = await Promise.all([
+      this.agentModel
+        .find(filter)
+        .select("-password -bankDetails -governmentId -createdAt -updatedAt ")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+
+      this.agentModel.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return {
+      agents,
+      page,
+      limit,
+      currentPage: page,
+      hasNextPage: page < totalPages,
+      hasPreviousPage: page > 1,
+      totalCount,
+      totalPages,
+    };
   }
   
   async getAllAgents(

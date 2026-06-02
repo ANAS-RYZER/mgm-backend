@@ -106,12 +106,17 @@ export class ProductsUserService {
       filter.categories = category;
     }
 
-    if (minPrice !== undefined && maxPrice !== undefined) {
-      filter.mrpPrice = {
-        $gte: Number(minPrice),
-        $lte: Number(maxPrice),
-      };
-    }
+    if (minPrice !== undefined || maxPrice !== undefined) {
+  filter.mrpPrice = {};
+
+  if (minPrice !== undefined) {
+    filter.mrpPrice.$gte = Number(minPrice);
+  }
+
+  if (maxPrice !== undefined) {
+    filter.mrpPrice.$lte = Number(maxPrice);
+  }
+}
 
     if (purity) {
       filter['goldSpecs.karat'] = purity;
