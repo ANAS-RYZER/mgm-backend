@@ -43,11 +43,29 @@ export class AgentController {
   @Get("/applications")
   @HttpCode(HttpStatus.OK)
   @UseGuards(AdminJwtAuthGuard)
-  async getAllApplications(@Query("status") status?: AgentStatus, @Query("search") search?: string) {
-    const agents = await this.agentService.getAllApplications(status, search);
+  async getAllApplications(
+    @Query("status") status?: AgentStatus,
+    @Query("page") page = "1",
+    @Query("limit") limit = "10",
+  ) {
+    const result = await this.agentService.getAllApplications(
+      status,
+      Number(page),
+      Number(limit),
+    );
+
     return {
       message: "Agents fetched successfully",
-      data: agents,
+      data: result.agents,
+      pagination: {
+        page: result.page,
+        limit: result.limit,
+        currentPage: result.currentPage,
+        hasNextPage: result.hasNextPage,
+        hasPreviousPage: result.hasPreviousPage,
+        totalCount: result.totalCount,
+        totalPages: result.totalPages,
+      },
     };
   }
 

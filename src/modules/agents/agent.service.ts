@@ -82,22 +82,47 @@ export class AgentService {
   }
 
   // Get all agents (for admin)
-  async getAllApplications(status?: AgentStatus, search?: string): Promise<Agent[]> {
-    const filter: any = {};
-    if (search) {
-      const regex = new RegExp(search, "i");
-      filter.$or = [
-        { name: regex },
-        { email: regex },
-        { phoneNumber: regex },
-        { status: regex },
-      ];
-    }
-    return this.agentModel
-      .find(filter)
-      .select("-password -bankDetails -governmentId -createdAt -updatedAt ")
-      .lean()
-      .sort({ createdAt: -1 });
+  async getAllApplications(
+    status?: AgentStatus,
+    page = 1,
+    limit = 10,
+  ): Promise<{
+    agents: Agent[];
+    page: number;
+    limit: number;
+    currentPage: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+    totalCount: number;
+    totalPages: number;
+  }> {
+    const filter = status ? { status } : {};
+    const skip = (page - 1) * limit;
+
+    const [agents, totalCount] = await Promise.all([
+      this.agentModel
+        .find(filter)
+        .select("-password -bankDetails -governmentId -createdAt -updatedAt ")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+
+      this.agentModel.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return {
+      agents,
+      page,
+      limit,
+      currentPage: page,
+      hasNextPage: page < totalPages,
+      hasPreviousPage: page > 1,
+      totalCount,
+      totalPages,
+    };
   }
   
   async getAllAgents(
